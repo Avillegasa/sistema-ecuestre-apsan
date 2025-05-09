@@ -40,3 +40,34 @@ class IsEntrenadorDeJineteEvaluado(permissions.BasePermission):
                     obj.inscripcion.jinete.entrenador == request.user.entrenador)
         
         return False  # No permitir modificaciones
+
+class IsJuezOrReadOnly(permissions.BasePermission):
+    """
+    Permiso que permite a los jueces modificar evaluaciones asignadas.
+    """
+    def has_permission(self, request, view):
+        # Permitir solicitudes de lectura a usuarios autenticados
+        if request.method in permissions.SAFE_METHODS:
+            return request.user and request.user.is_authenticated
+        
+        # Permitir modificación solo a jueces
+        return (
+            request.user and 
+            request.user.is_authenticated and 
+            request.user.tipo_usuario == 'juez'
+        )
+    
+    def has_object_permission(self, request, view, obj):
+        # Permitir solicitudes de lectura a usuarios autenticados
+        if request.method in permissions.SAFE_METHODS:
+            return request.user and request.user.is_authenticated
+        
+        # Para evaluaciones, verificar si el juez está asignado
+        if hasattr(obj, 'juez'):
+            return (
+                request.user.tipo_usuario == 'juez' and 
+                hasattr(request.user, 'juez') and 
+                request.user.juez == obj.juez
+            )
+        
+        return False

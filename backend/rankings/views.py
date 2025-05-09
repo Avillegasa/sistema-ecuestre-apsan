@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from usuarios.permissions import IsAdminUser
+from .permissions import IsJineteParticipante, IsEntrenadorDeJineteParticipante, IsRankingPublicado
 from competencias.models import Competencia, Categoria, Inscripcion
 from .models import Ranking, ResultadoRanking, Certificado
 from .serializers import (

@@ -1,20 +1,20 @@
 # backend/evaluaciones/views.py
 
-from rest_framework import viewsets, permissions, status, filters
+from rest_framework import viewsets, permissions, status, filters, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.utils import timezone
 
-from usuarios.permissions import IsAdminUser, IsJuezOrReadOnly
+from usuarios.permissions import IsAdminUser
+from .permissions import IsJuezOrReadOnly, IsJineteEvaluado, IsEntrenadorDeJineteEvaluado
 from competencias.models import CriterioEvaluacion, Inscripcion
 from .models import Evaluacion, Puntuacion
 from .serializers import (
     EvaluacionSerializer, EvaluacionDetailSerializer, EvaluacionResumenSerializer,
     PuntuacionSerializer, PuntuacionDetailSerializer
 )
-
 class EvaluacionViewSet(viewsets.ModelViewSet):
     """
     ViewSet para operaciones CRUD en el modelo Evaluacion.
