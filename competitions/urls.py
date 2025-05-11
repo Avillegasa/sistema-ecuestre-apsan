@@ -1,9 +1,19 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 
+# Configurar router para ViewSets
+router = DefaultRouter()
+router.register(r'', views.CompetitionViewSet)
+router.register(r'categories', views.CategoryViewSet)
+router.register(r'riders', views.RiderViewSet)
+router.register(r'horses', views.HorseViewSet)
+router.register(r'participants', views.ParticipantViewSet)
+
 urlpatterns = [
-    # Estas URLs se implementarán más adelante
-    # path('', views.competition_list, name='competition_list'),
-    # path('<int:pk>/', views.competition_detail, name='competition_detail'),
-    # path('<int:pk>/participants/', views.competition_participants, name='competition_participants'),
+    # ViewSets
+    path('', include(router.urls)),
+    
+    # Endpoints adicionales
+    path('<int:competition_id>/participants/', views.competition_participants, name='competition_participants'),
 ]
