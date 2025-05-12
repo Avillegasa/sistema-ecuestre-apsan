@@ -20,9 +20,6 @@ _firebase_app = None
 def initialize_firebase():
     """
     Inicializa la conexión con Firebase si no está ya inicializada.
-    
-    Raises:
-        ValueError: Si las credenciales no están configuradas correctamente
     """
     global _firebase_initialized, _firebase_app
     
@@ -30,13 +27,15 @@ def initialize_firebase():
         cred_path = getattr(settings, 'FIREBASE_CREDENTIALS', None)
         
         if not cred_path or not os.path.exists(cred_path):
-            raise ValueError("Credenciales de Firebase no configuradas correctamente")
+            logger.warning("Credenciales de Firebase no configuradas. Funcionalidad limitada.")
+            return False
         
         try:
             # Obtener la URL de la base de datos de settings
             database_url = getattr(settings, 'FIREBASE_DATABASE_URL', None)
             if not database_url:
-                raise ValueError("URL de Firebase no configurada")
+                logger.warning("URL de Firebase no configurada. Funcionalidad limitada.")
+                return False
             
             # Inicializar la aplicación Firebase
             cred = credentials.Certificate(cred_path)
@@ -46,10 +45,12 @@ def initialize_firebase():
             
             _firebase_initialized = True
             logger.info("Firebase inicializado correctamente")
+            return True
         except Exception as e:
             logger.error(f"Error al inicializar Firebase: {e}")
-            raise
-
+            return False
+    
+    return _firebase_initialized
 
 def get_firebase_ref(path: str):
     """
@@ -103,6 +104,10 @@ def sync_rankings(competition_id: int, rankings: Optional[List[Dict[str, Any]]] 
     Returns:
         bool: True si la sincronización fue exitosa
     """
+    if not initialize_firebase():
+        logger.warning("Firebase no inicializado. No se sincronizarán los rankings.")
+        return False
+    
     try:
         # Obtener datos si no fueron proporcionados
         if not rankings:
@@ -209,8 +214,8 @@ def sync_rankings(competition_id: int, rankings: Optional[List[Dict[str, Any]]] 
             }
         )
         
-        # Re-lanzar para manejo superior
-        raise
+        # No relanzar para manejo superior
+        return False  # Cambiado de raise para evitar propagación de errores
 
 
 def sync_scores(score_id: int) -> bool:

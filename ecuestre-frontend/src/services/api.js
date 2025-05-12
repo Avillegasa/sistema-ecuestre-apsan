@@ -21,8 +21,25 @@ api.interceptors.request.use(config => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  // Añadir CSRF token para peticiones no GET
+  if (config.method !== 'get') {
+    // Obtener token CSRF de la cookie (asumiendo Django)
+    const csrfToken = getCookie('csrftoken');
+    if (csrfToken) {
+      config.headers['X-CSRFToken'] = csrfToken;
+    }
+  }
+  
   return config;
 });
+
+// Función para obtener el valor de una cookie por su nombre
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
 
 // Interceptor para manejar errores
 api.interceptors.response.use(

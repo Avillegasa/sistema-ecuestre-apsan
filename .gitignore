@@ -51,3 +51,6 @@ yarn-error.log
 
 competitions/__pycache__
 ecuestre-frontend/node_modules
+
+credentials/
+firebase-credentials-*.json

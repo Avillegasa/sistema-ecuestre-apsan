@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from competitions.models import Competition
 
 class UserManager(BaseUserManager):
     """Manager personalizado para el modelo User"""
@@ -67,8 +68,8 @@ class User(AbstractUser):
     
     def save(self, *args, **kwargs):
         # Asegurar que los usuarios con rol 'judge' tengan is_judge=True
-        if self.role == 'judge':
-            self.is_judge = True
+        # y los demas no
+        self.is_judge = (self.role == 'judge')
         super(User, self).save(*args, **kwargs)
 
 

@@ -45,6 +45,7 @@ CHANNEL_LAYERS = {
 
 # Firebase settings for production
 FIREBASE_CREDENTIALS = os.environ.get('FIREBASE_CREDENTIALS_PATH')
+FIREBASE_DATABASE_URL = os.environ.get('FIREBASE_DATABASE_URL')
 
 # Security settings
 SECURE_SSL_REDIRECT = True
