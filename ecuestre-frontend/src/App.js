@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import GlobalStyles from './styles/GlobalStyles';
 import theme from './styles/theme';
+import FEIHelpPage from './pages/FEIHelpPage';
 
 // Importar páginas (se implementarán más adelante)
 // import Home from './pages/Home';
@@ -33,6 +34,7 @@ function App() {
           <Route path="/competitions/:id" element={<TemporaryPage name="Detalle de Competencia" />} />
           <Route path="/judging/:competition_id/:participant_id" element={<TemporaryPage name="Panel de Jueces" />} />
           <Route path="/rankings/:competition_id" element={<TemporaryPage name="Tabla de Rankings" />} />
+          <Route path="/help/fei" element={<FEIHelpPage />} />
         </Routes>
       </Router>
     </ThemeProvider>

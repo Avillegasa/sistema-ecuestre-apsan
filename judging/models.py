@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from competitions.models import Competition, Participant
+from .models_extension import ScoreExtensionMixin, RankingExtensionMixin
 
 class EvaluationParameter(models.Model):
     """Modelo para parámetros de evaluación FEI"""
@@ -69,7 +70,7 @@ class CompetitionParameter(models.Model):
         return self.custom_max_value if self.custom_max_value is not None else self.parameter.max_value
 
 
-class Score(models.Model):
+class Score(models.Model, ScoreExtensionMixin):
     """Modelo para calificaciones de un juez a un participante"""
     
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE, related_name='scores')
@@ -114,19 +115,14 @@ class Score(models.Model):
     
     def save(self, *args, **kwargs):
         # Calcular el resultado según la fórmula FEI
-        coefficient = self.parameter.effective_coefficient
-        max_value = self.parameter.effective_max_value
-        
-        # El resultado es la calificación multiplicada por el coeficiente
-        result = float(self.value) * coefficient
-        
-        # El resultado no debe exceder el valor máximo
-        result = min(result, max_value)
-        
-        # Redondear al valor entero
-        self.calculated_result = round(result)
+        self.calculated_result = self.calculate_result()
         
         super(Score, self).save(*args, **kwargs)
+    
+    def clean(self):
+        """Validar calificación según normas FEI"""
+        super().clean()
+        self.validate_fei_rules()
 
 
 class ScoreEdit(models.Model):
@@ -155,7 +151,7 @@ class ScoreEdit(models.Model):
         return f"Edición de {self.score} por {self.editor.get_full_name()}"
 
 
-class Ranking(models.Model):
+class Ranking(models.Model, RankingExtensionMixin):
     """Modelo para rankings calculados"""
     
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE, related_name='rankings')

@@ -120,6 +120,28 @@ const StatusIndicator = styled.div`
   }
 `;
 
+// Área de comentarios
+const CommentsContainer = styled.div`
+  margin-top: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
+`;
+
+const CommentsTitle = styled.h3`
+  font-size: ${props => props.theme.fontSizes.medium};
+  margin-bottom: ${props => props.theme.spacing.sm};
+`;
+
+const CommentsTextarea = styled.textarea`
+  width: 100%;
+  min-height: 80px;
+  padding: ${props => props.theme.spacing.sm};
+  border: 1px solid ${props => props.theme.colors.lightGray};
+  border-radius: ${props => props.theme.borderRadius.small};
+  font-family: ${props => props.theme.fonts.main};
+  font-size: ${props => props.theme.fontSizes.medium};
+  resize: vertical;
+`;
+
 /**
  * Componente ScoreCard para calificación FEI
  * 
@@ -145,12 +167,25 @@ const ScoreCard = ({
   const [scores, setScores] = useState({});
   // Estado para almacenar los resultados calculados
   const [results, setResults] = useState({});
+  // Estado para almacenar comentarios
+  const [comments, setComments] = useState({});
   // Estado para indicar si hay cambios sin guardar
   const [hasChanges, setHasChanges] = useState(false);
+  // Estado para almacenar el motivo de edición
+  const [editReason, setEditReason] = useState('');
   
   // Inicializar calificaciones con valores iniciales
   useEffect(() => {
     setScores(initialScores);
+    
+    // Obtener comentarios de las calificaciones iniciales
+    const initialComments = {};
+    Object.keys(initialScores).forEach(paramId => {
+      if (initialScores[paramId]?.comments) {
+        initialComments[paramId] = initialScores[paramId].comments;
+      }
+    });
+    setComments(initialComments);
     
     // Calcular resultados iniciales
     const initialResults = {};
@@ -205,9 +240,35 @@ const ScoreCard = ({
     setHasChanges(true);
   };
   
+  // Manejar cambio en comentarios
+  const handleCommentChange = (paramId, value) => {
+    setComments({
+      ...comments,
+      [paramId]: value
+    });
+    setHasChanges(true);
+  };
+  
   // Guardar calificaciones
   const handleSave = () => {
-    onSave(scores);
+    // Preparar datos para guardar
+    const scoreData = {};
+    
+    parameters.forEach(param => {
+      if (scores[param.id] !== undefined) {
+        scoreData[param.id] = {
+          value: scores[param.id],
+          comments: comments[param.id] || '',
+        };
+      }
+    });
+    
+    // Añadir motivo de edición si existe
+    if (editReason) {
+      scoreData.editReason = editReason;
+    }
+    
+    onSave(scoreData);
     setHasChanges(false);
   };
   
@@ -284,6 +345,33 @@ const ScoreCard = ({
           ))}
         </tbody>
       </ScoreTable>
+      
+      {/* Área de comentarios por parámetro */}
+      <CommentsContainer>
+        <CommentsTitle>Comentarios</CommentsTitle>
+        {parameters.map(param => (
+          <div key={`comment-${param.id}`} style={{ marginBottom: '1rem' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>{param.name}</div>
+            <CommentsTextarea
+              placeholder={`Comentarios para ${param.name}`}
+              value={comments[param.id] || ''}
+              onChange={(e) => handleCommentChange(param.id, e.target.value)}
+            />
+          </div>
+        ))}
+      </CommentsContainer>
+      
+      {/* Motivo de edición (solo si hay calificaciones previas) */}
+      {Object.keys(initialScores).length > 0 && (
+        <CommentsContainer>
+          <CommentsTitle>Motivo de edición</CommentsTitle>
+          <CommentsTextarea
+            placeholder="Ingrese el motivo por el que está modificando las calificaciones"
+            value={editReason}
+            onChange={(e) => setEditReason(e.target.value)}
+          />
+        </CommentsContainer>
+      )}
       
       {/* Botones de acción */}
       <ActionButtons>
