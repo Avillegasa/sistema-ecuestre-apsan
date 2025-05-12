@@ -255,3 +255,169 @@ def update_participant_rankings(competition_id: int, recalculate_all: bool = Fal
     except Exception as e:
         logger.error(f"Error al actualizar rankings: {e}")
         raise
+
+
+def calculate_judge_scoring_statistics(judge_id: int, competition_id: int = None) -> dict:
+    """
+    Calcula estadísticas de calificación de un juez.
+    
+    Args:
+        judge_id: ID del juez
+        competition_id: ID de la competencia (opcional)
+    
+    Returns:
+        Dict: Estadísticas de calificación
+    """
+    from .models import Score
+    from django.db.models import Avg, Count, Min, Max
+    from collections import defaultdict
+    
+    # Construir query base
+    query = Score.objects.filter(judge_id=judge_id)
+    
+    # Filtrar por competencia si se especifica
+    if competition_id:
+        query = query.filter(competition_id=competition_id)
+    
+    # Calcular estadísticas generales
+    stats = query.aggregate(
+        avg_score=Avg('value'),
+        min_score=Min('value'),
+        max_score=Max('value'),
+        count=Count('id'),
+        avg_result=Avg('calculated_result')
+    )
+    
+    # Si no hay calificaciones, devolver valores por defecto
+    if not stats['count']:
+        return {
+            'avg_score': 0,
+            'min_score': 0,
+            'max_score': 0,
+            'count': 0,
+            'avg_result': 0,
+            'distribution': {},
+            'competition_stats': {}
+        }
+    
+    # Calcular distribución de calificaciones
+    distribution = defaultdict(int)
+    for score in query.values_list('value', flat=True):
+        # Redondear a entero para agrupar
+        rounded = round(float(score))
+        distribution[rounded] += 1
+    
+    # Convertir a diccionario normal
+    distribution_dict = dict(distribution)
+    
+    # Calcular estadísticas por competencia
+    competition_stats = {}
+    if not competition_id:
+        competitions = query.values_list('competition_id', flat=True).distinct()
+        for comp_id in competitions:
+            comp_query = query.filter(competition_id=comp_id)
+            comp_stats = comp_query.aggregate(
+                avg_score=Avg('value'),
+                count=Count('id')
+            )
+            competition_stats[comp_id] = comp_stats
+    
+    return {
+        'avg_score': float(stats['avg_score']) if stats['avg_score'] else 0,
+        'min_score': float(stats['min_score']) if stats['min_score'] else 0,
+        'max_score': float(stats['max_score']) if stats['max_score'] else 0,
+        'count': stats['count'],
+        'avg_result': float(stats['avg_result']) if stats['avg_result'] else 0,
+        'distribution': distribution_dict,
+        'competition_stats': competition_stats
+    }
+
+
+def compare_judge_scores(competition_id: int, participant_id: int) -> dict:
+    """
+    Compara calificaciones entre jueces para un participante.
+    
+    Args:
+        competition_id: ID de la competencia
+        participant_id: ID del participante
+    
+    Returns:
+        Dict: Comparación de calificaciones
+    """
+    from .models import Score
+    from competitions.models import CompetitionJudge
+    from django.db.models import Avg
+    
+    # Obtener jueces asignados a la competencia
+    judges = CompetitionJudge.objects.filter(
+        competition_id=competition_id
+    ).select_related('judge').order_by('id')
+    
+    # Si no hay jueces, devolver datos básicos
+    if not judges:
+        return {
+            'judges': [],
+            'parameters': [],
+            'judges_count': 0,
+            'parameters_count': 0
+        }
+    
+    # Obtener parámetros de competencia
+    from .models import CompetitionParameter
+    parameters = CompetitionParameter.objects.filter(
+        competition_id=competition_id
+    ).select_related('parameter').order_by('order')
+    
+    # Obtener calificaciones para cada juez
+    judge_scores = {}
+    for judge in judges:
+        scores = Score.objects.filter(
+            competition_id=competition_id,
+            participant_id=participant_id,
+            judge=judge.judge
+        ).select_related('parameter', 'parameter__parameter')
+        
+        judge_scores[judge.judge.id] = {
+            'judge_id': judge.judge.id,
+            'judge_name': f"{judge.judge.first_name} {judge.judge.last_name}",
+            'is_head_judge': judge.is_head_judge,
+            'scores': {score.parameter.parameter_id: float(score.value) for score in scores}
+        }
+    
+    # Calcular promedio por parámetro
+    param_averages = {}
+    for param in parameters:
+        scores = Score.objects.filter(
+            competition_id=competition_id,
+            participant_id=participant_id,
+            parameter=param
+        ).aggregate(avg=Avg('value'))
+        
+        param_averages[param.parameter.id] = float(scores['avg']) if scores['avg'] else 0
+    
+    # Preparar datos de respuesta
+    judges_data = []
+    for judge in judges:
+        judges_data.append({
+            'id': judge.judge.id,
+            'name': f"{judge.judge.first_name} {judge.judge.last_name}",
+            'is_head_judge': judge.is_head_judge,
+            'scores': judge_scores.get(judge.judge.id, {}).get('scores', {})
+        })
+    
+    parameters_data = []
+    for param in parameters:
+        parameters_data.append({
+            'id': param.parameter.id,
+            'name': param.parameter.name,
+            'coefficient': param.effective_coefficient,
+            'order': param.order,
+            'average': param_averages.get(param.parameter.id, 0)
+        })
+    
+    return {
+        'judges': judges_data,
+        'parameters': parameters_data,
+        'judges_count': len(judges_data),
+        'parameters_count': len(parameters_data)
+    }

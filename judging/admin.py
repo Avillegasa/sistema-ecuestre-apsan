@@ -1,4 +1,3 @@
-
 # judging/admin.py
 from django.contrib import admin
 from .models import (
@@ -15,6 +14,7 @@ class CompetitionParameterAdmin(admin.ModelAdmin):
     list_display = ('competition', 'parameter', 'order', 'effective_coefficient', 'effective_max_value')
     list_filter = ('competition',)
     autocomplete_fields = ['competition', 'parameter']
+    search_fields = ['competition__name', 'parameter__name']  # Añadir esta línea
 
 @admin.register(Score)
 class ScoreAdmin(admin.ModelAdmin):
