@@ -167,15 +167,23 @@ class RankingExtensionMixin:
         
         # Actualizar o crear objeto Ranking
         ranking, created = Ranking.objects.update_or_create(
-            competition=competition,
-            participant=participant,
-            defaults={
-                'average_score': final_ranking['average'],
-                'percentage': final_ranking['percentage'],
-                # La posición se actualizará en update_participant_rankings
-                'position': 0
-            }
+        competition=competition,
+        participant=participant,
+        defaults={
+            'average_score': final_ranking['average'],
+            'percentage': final_ranking['percentage'],  # Asegúrate de que este valor sea correcto
+            'position': 0  # La posición se actualizará en update_participant_rankings
+        }
         )
+        # CORRECCIÓN: Verifica que los valores se hayan guardado correctamente
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if float(ranking.percentage) == 0 and float(final_ranking['percentage']) > 0:
+            logger.error(f"Problema al guardar porcentaje: valor original={final_ranking['percentage']}, guardado={ranking.percentage}")
+            # Intentar forzar un valor válido
+            ranking.percentage = final_ranking['percentage']
+            ranking.save(update_fields=['percentage'])
         
         return ranking
     
@@ -404,7 +412,7 @@ class Ranking(models.Model, RankingExtensionMixin):
         ordering = ['competition', 'position']
         
     def __str__(self):
-        return f"Ranking: {self.participant} - Pos: {self.position} ({self.percentage}%)"
+        return f"Ranking: {self.participant} - Pos: {self.position} ({float(self.percentage):.2f}%)"
 
 
 class FirebaseSync(models.Model):

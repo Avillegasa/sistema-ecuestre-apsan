@@ -52,13 +52,25 @@ def calculate_average_score(scores: List[Any]) -> Decimal:
     if not scores:
         return Decimal('0.00')
     
-    # Comprobar si los elementos son objetos Score o valores numéricos
-    if hasattr(scores[0], 'calculated_result'):
-        total = sum(float(score.calculated_result) for score in scores)
-    else:
-        total = sum(float(score) for score in scores)
+    # CORRECCIÓN: Verifica si estamos obteniendo valores correctos
+    values = []
+    for score in scores:
+        if hasattr(score, 'calculated_result'):
+            values.append(float(score.calculated_result))
+        else:
+            values.append(float(score))
     
-    avg = Decimal(total) / Decimal(len(scores))
+    # CORRECCIÓN: Asegúrate de que la división ocurra correctamente
+    if not values:
+        return Decimal('0.00')
+    
+    total = sum(values)
+    avg = Decimal(str(total)) / Decimal(str(len(values)))
+    
+    # CORRECCIÓN: Agrega logging para depuración
+    if avg == 0 and total > 0:
+        logger.warning(f"Promedio calculado como 0 aunque el total es {total} (valores: {values})")
+    
     return avg.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
@@ -72,7 +84,20 @@ def convert_to_percentage(average: Decimal) -> Decimal:
     Returns:
         Decimal: Porcentaje (0-100) con 2 decimales
     """
+    # CORRECCIÓN: Asegúrate de que average sea un Decimal y no cero
+    if average is None:
+        return Decimal('0.00')
+    
+    if not isinstance(average, Decimal):
+        average = Decimal(str(average))
+    
+    # CORRECCIÓN: Asegúrate de que la multiplicación ocurra con Decimals
     percentage = (average / Decimal('10')) * Decimal('100')
+    
+    # CORRECCIÓN: Verifica que el resultado no sea cero antes de retornar
+    if percentage == 0 and average > 0:
+        logger.warning(f"Problema en la conversión a porcentaje: average={average}, porcentaje calculado={percentage}")
+    
     return percentage.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
@@ -108,6 +133,10 @@ def calculate_judge_ranking(judge_id: int, competition_id: int, participant_id: 
     # Calcular promedio y porcentaje
     average = calculate_average_score(list(scores))
     percentage = convert_to_percentage(average)
+
+    if percentage == 0 and scores.exists():
+        logger.warning(f"Porcentaje calculado como 0 para juez {judge_id}, participante {participant_id}")
+        # Este es posiblemente el origen del problema
     
     return {
         'judge_id': judge_id,
