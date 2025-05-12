@@ -43,17 +43,44 @@ function getCookie(name) {
 }
 
 // Interceptor para manejar errores
+// Mejorar el interceptor de respuesta
 api.interceptors.response.use(
   response => response,
   error => {
-    // Manejar errores comunes (401, 403, etc.)
+    // Manejar errores específicos
     if (error.response) {
-      if (error.response.status === 401) {
-        // Redireccionar a login si hay problemas de autenticación
-        localStorage.removeItem('authToken');
-        window.location.href = '/login';
+      const { status } = error.response;
+      
+      switch (status) {
+        case 401:
+          // No autorizado, redirigir a login
+          localStorage.removeItem('authToken');
+          window.location.href = '/login';
+          break;
+        case 403:
+          // Prohibido, redirigir a página de no autorizado
+          window.location.href = '/unauthorized';
+          break;
+        case 404:
+          // Recurso no encontrado
+          console.error('Recurso no encontrado');
+          break;
+        case 500:
+          // Error del servidor
+          console.error('Error del servidor');
+          break;
+        default:
+          // Otros errores
+          console.error('Error en la solicitud:', status);
       }
+    } else if (error.request) {
+      // La solicitud se realizó pero no se recibió respuesta (probablemente offline)
+      console.error('No se recibió respuesta del servidor. Posiblemente offline.');
+    } else {
+      // Error al configurar la solicitud
+      console.error('Error en la configuración de la solicitud:', error.message);
     }
+    
     return Promise.reject(error);
   }
 );

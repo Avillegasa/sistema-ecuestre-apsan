@@ -51,7 +51,8 @@ const useOffline = () => {
   const saveScore = async (competitionId, participantId, judgeId, scoreData) => {
     try {
       if (isOnline) {
-        // Si está online, enviar directamente al servidor
+         // Si está online, importar dinámicamente la API para evitar dependencia circular
+        const { submitScore } = await import('../services/api');
         await submitScore(competitionId, participantId, {
           judge_id: judgeId,
           scores: scoreData

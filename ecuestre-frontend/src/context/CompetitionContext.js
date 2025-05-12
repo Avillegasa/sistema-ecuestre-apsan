@@ -1,3 +1,4 @@
+// src/context/CompetitionContext.js
 import React, { createContext, useState, useEffect } from 'react';
 import { fetchCompetition } from '../services/api';
 
@@ -12,56 +13,56 @@ export const CompetitionProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
- // Cargar una competencia específica
-const loadCompetition = async (competitionId, forceRefresh = false) => {
-  setLoading(true);
-  setError(null);
-  
-  try {
-    let competitionData;
+  // Cargar una competencia específica
+  const loadCompetition = async (competitionId, forceRefresh = false) => {
+    setLoading(true);
+    setError(null);
     
-    // Intentar obtener datos online
     try {
-      const response = await fetchCompetition(competitionId);
-      competitionData = response.data;
+      let competitionData;
       
-      // Guardar datos para uso offline
+      // Intentar obtener datos online
       try {
-        const { saveCompetitionData } = await import('../services/offline');
-        await saveCompetitionData(competitionData);
-      } catch (err) {
-        console.error("Error guardando datos offline:", err);
-      }
-    } catch (onlineError) {
-      console.log("Error obteniendo datos online:", onlineError);
-      
-      // Si falla la conexión, intentar cargar datos offline
-      try {
-        const { getOfflineCompetition } = await import('../services/offline');
-        competitionData = await getOfflineCompetition(competitionId);
+        const response = await fetchCompetition(competitionId);
+        competitionData = response.data;
         
-        if (!competitionData) {
-          throw new Error('No se pudieron obtener los datos de la competencia');
+        // Guardar datos para uso offline
+        try {
+          const { saveCompetitionData } = await import('../services/offline');
+          await saveCompetitionData(competitionData);
+        } catch (err) {
+          console.error("Error guardando datos offline:", err);
         }
-      } catch (offlineError) {
-        console.error("Error obteniendo datos offline:", offlineError);
-        throw new Error('No se pudo conectar al servidor ni recuperar datos offline');
+      } catch (onlineError) {
+        console.log("Error obteniendo datos online:", onlineError);
+        
+        // Si falla la conexión, intentar cargar datos offline
+        try {
+          const { getOfflineCompetition } = await import('../services/offline');
+          competitionData = await getOfflineCompetition(competitionId);
+          
+          if (!competitionData) {
+            throw new Error('No se pudieron obtener los datos de la competencia');
+          }
+        } catch (offlineError) {
+          console.error("Error obteniendo datos offline:", offlineError);
+          throw new Error('No se pudo conectar al servidor ni recuperar datos offline');
+        }
       }
+      
+      setCurrentCompetition(competitionData);
+      setParticipants(competitionData.participants || []);
+      setJudges(competitionData.judges || []);
+      
+      setLoading(false);
+      return competitionData;
+    } catch (err) {
+      console.error('Error al cargar la competencia:', err);
+      setError(err.message || 'Error al cargar la competencia');
+      setLoading(false);
+      return null;
     }
-    
-    setCurrentCompetition(competitionData);
-    setParticipants(competitionData.participants || []);
-    setJudges(competitionData.judges || []);
-    
-    setLoading(false);
-    return competitionData;
-  } catch (err) {
-    console.error('Error al cargar la competencia:', err);
-    setError(err.message || 'Error al cargar la competencia');
-    setLoading(false);
-    return null;
-  }
-};
+  };
 
   // Limpiar datos de competencia actual
   const clearCompetition = () => {
