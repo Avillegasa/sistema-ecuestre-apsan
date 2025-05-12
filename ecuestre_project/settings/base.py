@@ -4,9 +4,13 @@ Base settings for ecuestre_project project.
 
 import os
 from pathlib import Path
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-u#j-2mnj#!q@r^bxk+8by--bzvfgd)a1y*5yb(55i6h8$ga57q'
@@ -177,3 +181,9 @@ CHANNEL_LAYERS = {
 
 # Permitir que Django Channels maneje el mecanismo de ASGI
 ASGI_APPLICATION = 'ecuestre_project.asgi.application'
+
+# Configuración de Firebase
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+SECRET_KEY = env('DJANGO_SECRET_KEY')

@@ -23,4 +23,4 @@ CHANNEL_LAYERS = {
 
 # Firebase settings for development (el archivo real se añadirá más tarde)
 FIREBASE_CREDENTIALS = os.path.join(BASE_DIR, 'credentials', 'firebase-credentials-dev.json')
-FIREBASE_DATABASE_URL = 'https://tu-proyecto-firebase.firebaseio.com'
+FIREBASE_DATABASE_URL = 'https://sistema-ecuestre-apsan-default-rtdb.firebaseio.com'
