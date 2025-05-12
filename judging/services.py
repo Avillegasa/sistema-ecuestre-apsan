@@ -50,26 +50,52 @@ def calculate_average_score(scores: List[Any]) -> Decimal:
         Decimal: Promedio de calificaciones con 2 decimales
     """
     if not scores:
+        print("No hay calificaciones para calcular promedio.")
         return Decimal('0.00')
     
-    # CORRECCIÓN: Verifica si estamos obteniendo valores correctos
+    # CORRECCIÓN: Extraer explícitamente los valores
     values = []
-    for score in scores:
+    for i, score in enumerate(scores):
         if hasattr(score, 'calculated_result'):
-            values.append(float(score.calculated_result))
+            # Extraer el valor calculated_result
+            value = float(score.calculated_result)
+            print(f"Score #{i+1}: valor calculated_result = {value}")
+            values.append(value)
+        elif hasattr(score, 'value'):
+            # Tal vez solo tiene value (sin resultado calculado)
+            value = float(score.value)
+            print(f"Score #{i+1}: valor directo = {value}")
+            values.append(value)
+        elif isinstance(score, (int, float, Decimal)):
+            # Es un valor numérico directo
+            value = float(score)
+            print(f"Score #{i+1}: valor numérico = {value}")
+            values.append(value)
         else:
-            values.append(float(score))
+            # Desconocido, intenta convertir
+            try:
+                value = float(score)
+                print(f"Score #{i+1}: valor convertido = {value}")
+                values.append(value)
+            except (TypeError, ValueError):
+                print(f"Score #{i+1}: No se pudo convertir a número: {score}")
     
-    # CORRECCIÓN: Asegúrate de que la división ocurra correctamente
     if not values:
+        print("ADVERTENCIA: No se pudieron extraer valores numéricos de los scores")
         return Decimal('0.00')
     
+    # Calcular promedio
     total = sum(values)
-    avg = Decimal(str(total)) / Decimal(str(len(values)))
+    if len(values) == 0:
+        print("ADVERTENCIA: División por cero al calcular promedio")
+        return Decimal('0.00')
+    
+    avg = Decimal(str(total / len(values)))
+    print(f"Promedio calculado: {float(avg)} (suma: {total}, cantidad: {len(values)})")
     
     # CORRECCIÓN: Agrega logging para depuración
     if avg == 0 and total > 0:
-        logger.warning(f"Promedio calculado como 0 aunque el total es {total} (valores: {values})")
+        print(f"ADVERTENCIA: Promedio calculado como 0 aunque el total es {total} (valores: {values})")
     
     return avg.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
@@ -130,13 +156,24 @@ def calculate_judge_ranking(judge_id: int, competition_id: int, participant_id: 
             'scores_count': 0
         }
     
-    # Calcular promedio y porcentaje
-    average = calculate_average_score(list(scores))
-    percentage = convert_to_percentage(average)
-
-    if percentage == 0 and scores.exists():
-        logger.warning(f"Porcentaje calculado como 0 para juez {judge_id}, participante {participant_id}")
-        # Este es posiblemente el origen del problema
+    # MODIFICACIÓN: Extraer los valores calculated_result explícitamente
+    results = [float(score.calculated_result) for score in scores]
+    
+    # Imprime los valores para depuración
+    print(f"Valores calculated_result para juez {judge_id}, participante {participant_id}: {results}")
+    
+    # Calcular promedio manualmente si es necesario
+    if results:
+        avg = sum(results) / len(results)
+        average = Decimal(str(avg))
+        # Convertir a porcentaje manualmente: (promedio / 10) * 100
+        percentage = (average / Decimal('10')) * Decimal('100')
+    else:
+        average = Decimal('0.00')
+        percentage = Decimal('0.00')
+    
+    # Imprimir los resultados calculados
+    print(f"Juez {judge_id}, Participante {participant_id}: average={float(average)}, percentage={float(percentage)}%")
     
     return {
         'judge_id': judge_id,
@@ -180,14 +217,24 @@ def calculate_final_ranking(competition_id: int, participant_id: int) -> Dict[st
             'judge_count': 0
         }
     
-    # Calcular promedio de porcentajes de todos los jueces
-    total_percentage = sum(ranking['percentage'] for ranking in judge_rankings)
-    avg_percentage = total_percentage / len(judge_rankings)
-    avg_percentage = avg_percentage.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+     # MODIFICACIÓN: Calcular promedio de porcentajes de todos los jueces con depuración
+    percentages = [jr['percentage'] for jr in judge_rankings]
+    print(f"Porcentajes para participante {participant_id}: {[float(p) for p in percentages]}")
+    
+    if percentages:
+        total_percentage = sum(float(p) for p in percentages)
+        avg_percentage = Decimal(str(total_percentage / len(percentages)))
+        # Verificar que no sea cero
+        if avg_percentage == 0 and any(p > 0 for p in percentages):
+            print(f"ERROR: avg_percentage es 0 aunque hay porcentajes > 0")
+    else:
+        avg_percentage = Decimal('0.00')
     
     # Convertir de nuevo a promedio (0-10)
     final_average = (avg_percentage / Decimal('100')) * Decimal('10')
-    final_average = final_average.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    
+    # Imprimir resultado final
+    print(f"Ranking final participante {participant_id}: average={float(final_average)}, percentage={float(avg_percentage)}%")
     
     return {
         'participant_id': participant_id,
@@ -222,15 +269,21 @@ def update_participant_rankings(competition_id: int, recalculate_all: bool = Fal
             is_withdrawn=False
         ).select_related('rider', 'horse', 'category')
         
+        print(f"Procesando {participants.count()} participantes para la competencia {competition.name}")
+        
         # Obtener jueces asignados
         judges = CompetitionJudge.objects.filter(
             competition=competition
         ).values_list('judge_id', flat=True)
         
+        print(f"Jueces asignados a la competencia: {len(judges)}")
+        
         rankings_data = []
         
         # Para cada participante, calcular ranking combinando calificaciones de todos los jueces
         for participant in participants:
+            print(f"\nCalculando ranking para participante: {participant} (ID: {participant.id})")
+            
             # Guardar posición anterior para determinar cambios de posición
             try:
                 previous_ranking = Ranking.objects.get(
@@ -238,11 +291,22 @@ def update_participant_rankings(competition_id: int, recalculate_all: bool = Fal
                     participant=participant
                 )
                 previous_position = previous_ranking.position
+                print(f"Posición anterior: {previous_position}")
             except Ranking.DoesNotExist:
                 previous_position = None
+                print("No hay ranking previo")
+            
+            # Verificar si hay calificaciones para este participante
+            score_count = Score.objects.filter(
+                competition_id=competition_id,
+                participant_id=participant.id
+            ).count()
+            print(f"Calificaciones encontradas: {score_count}")
             
             # Calcular ranking final
             final_ranking = calculate_final_ranking(competition.id, participant.id)
+            
+            print(f"Ranking calculado: promedio={float(final_ranking['average'])}, porcentaje={float(final_ranking['percentage'])}%")
             
             # Añadir datos adicionales
             final_ranking['participant'] = participant
@@ -253,19 +317,51 @@ def update_participant_rankings(competition_id: int, recalculate_all: bool = Fal
         # Ordenar por porcentaje y asignar posiciones
         rankings_data.sort(key=lambda x: x['percentage'], reverse=True)
         
+        print("\nRankings ordenados por porcentaje:")
+        for i, rank in enumerate(rankings_data):
+            print(f"Posición {i+1}: {rank['participant']} - {float(rank['percentage'])}%")
+        
         # Actualizar posiciones en la base de datos
         for position, ranking_data in enumerate(rankings_data, 1):
             participant = ranking_data['participant']
+            percentage = ranking_data.get('percentage', Decimal('0.00'))
+            average = ranking_data.get('average', Decimal('0.00'))
+            
+            print(f"\nGuardando ranking: Participante={participant}, Promedio={float(average)}, Porcentaje={float(percentage)}%")
+            
+            # Verifica que percentage no sea cero si hay calificaciones
+            if float(percentage) == 0:
+                has_scores = Score.objects.filter(
+                    competition_id=competition_id,
+                    participant=participant
+                ).exists()
+                if has_scores:
+                    print(f"ADVERTENCIA: Porcentaje es 0 aunque hay calificaciones para {participant}")
+                    # Recalcular en el momento
+                    scores = Score.objects.filter(
+                        competition_id=competition_id,
+                        participant=participant
+                    )
+                    results = [float(s.calculated_result) for s in scores]
+                    if results:
+                        avg = sum(results) / len(results)
+                        new_percentage = (avg / 10) * 100
+                        percentage = Decimal(str(new_percentage))
+                        print(f"Porcentaje recalculado: {float(percentage)}%")
             
             Ranking.objects.update_or_create(
                 competition=competition,
                 participant=participant,
                 defaults={
-                    'average_score': ranking_data['average'],
-                    'percentage': ranking_data['percentage'],
+                    'average_score': average,
+                    'percentage': percentage,
                     'position': position
                 }
             )
+            
+            # Verifica después de guardar
+            saved_ranking = Ranking.objects.get(competition=competition, participant=participant)
+            print(f"Ranking guardado: {saved_ranking}, Porcentaje guardado: {float(saved_ranking.percentage)}%")
             
             # Actualizar posición en el diccionario
             ranking_data['position'] = position
@@ -273,18 +369,22 @@ def update_participant_rankings(competition_id: int, recalculate_all: bool = Fal
         # Sincronizar con Firebase si está disponible
         try:
             from .firebase import sync_rankings
-            sync_rankings(competition_id, rankings_data)
+            sync_success = sync_rankings(competition_id, rankings_data)
+            print(f"Sincronización con Firebase: {'Exitosa' if sync_success else 'Fallida'}")
         except ImportError:
-            logger.warning("Módulo Firebase no disponible. No se sincronizarán los rankings.")
+            print("Módulo Firebase no disponible. No se sincronizarán los rankings.")
         except Exception as e:
             logger.error(f"Error al sincronizar rankings con Firebase: {e}")
+            print(f"Error en sincronización Firebase: {str(e)}")
         
         return rankings_data
     
     except Exception as e:
         logger.error(f"Error al actualizar rankings: {e}")
+        import traceback
+        traceback.print_exc()
+        print(f"ERROR en update_participant_rankings: {str(e)}")
         raise
-
 
 def calculate_judge_scoring_statistics(judge_id: int, competition_id: int = None) -> dict:
     """
