@@ -198,6 +198,10 @@ def sync_rankings(competition_id: int, rankings: Optional[List[Dict[str, Any]]] 
             }
         )
         
+        # Notificar a los clientes WebSocket
+        from .consumers import notify_rankings_update
+        notify_rankings_update(competition_id)
+        
         logger.info(f"Rankings sincronizados para competencia {competition_id}: {len(rankings)} participantes")
         return True
         
@@ -215,7 +219,7 @@ def sync_rankings(competition_id: int, rankings: Optional[List[Dict[str, Any]]] 
         )
         
         # No relanzar para manejo superior
-        return False  # Cambiado de raise para evitar propagación de errores
+        return False
 
 
 def sync_scores(score_id: int) -> bool:

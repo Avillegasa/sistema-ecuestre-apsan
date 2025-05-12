@@ -14,16 +14,15 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ecuestre_project.settings')
 django_asgi_app = get_asgi_application()
 
 # Importar después de configurar DJANGO_SETTINGS_MODULE
-# Esto se implementará más adelante cuando se desarrolle el módulo de WebSockets
-# from judging.routing import websocket_urlpatterns
+from judging.routing import websocket_urlpatterns
 
+# Configuración del protocolo para ASGI
 # Configuración del protocolo para ASGI
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
-    # Se añadirán los WebSockets más adelante
-    # "websocket": AuthMiddlewareStack(
-    #     URLRouter(
-    #         websocket_urlpatterns
-    #     )
-    # ),
+    "websocket": AuthMiddlewareStack(
+        URLRouter(
+            websocket_urlpatterns
+        )
+    ),
 })

@@ -67,6 +67,13 @@ def update_ranking_on_score_change(sender, instance, created, **kwargs):
                 competition_id=competition_id,
                 defaults={'is_synced': False, 'error_message': str(e)}
             )
+            
+        # Notificar a clientes WebSocket
+        try:
+            from .consumers import notify_rankings_update
+            notify_rankings_update(competition_id)
+        except Exception as e:
+            logger.error(f"Error al notificar rankings via WebSocket: {e}")
     except Exception as e:
         logger.error(f"Error al actualizar ranking después de guardar calificación: {e}")
 
@@ -118,7 +125,7 @@ def update_ranking_on_score_delete(sender, instance, **kwargs):
         
         # Intentar sincronizar con Firebase
         try:
-            from .firebase import sync_rankings
+            from .firebase import sync_rankings, delete_competition_data
             
             # Sincronizar rankings
             sync_rankings(competition_id)
@@ -136,6 +143,13 @@ def update_ranking_on_score_delete(sender, instance, **kwargs):
                 competition_id=competition_id,
                 defaults={'is_synced': False, 'error_message': str(e)}
             )
+            
+        # Notificar a clientes WebSocket
+        try:
+            from .consumers import notify_rankings_update
+            notify_rankings_update(competition_id)
+        except Exception as e:
+            logger.error(f"Error al notificar rankings via WebSocket: {e}")
     except Exception as e:
         logger.error(f"Error al actualizar ranking después de eliminar calificación: {e}")
 

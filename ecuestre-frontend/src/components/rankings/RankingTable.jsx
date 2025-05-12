@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { css, keyframes } from 'styled-components';
-import { subscribeToRankings } from '../../services/firebase';
 import { formatPercentage } from '../../utils/formatters';
+import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 
-// Animación de cambio de posición
+// Animaciones para los cambios de posición
 const moveUp = keyframes`
   0% { transform: translateY(20px); opacity: 0.8; }
   100% { transform: translateY(0); opacity: 1; }
@@ -138,6 +138,26 @@ const PercentageCell = styled(TableCell)`
   text-align: center;
 `;
 
+// Indicador de sincronización con Firebase/WebSocket
+const SyncIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background-color: ${props => {
+    switch (props.syncMethod) {
+      case 'firebase': return props.theme.colors.accent;
+      case 'websocket': return props.theme.colors.success;
+      case 'both': return props.theme.colors.primary;
+      default: return props.theme.colors.error;
+    }
+  }};
+  color: ${props => props.theme.colors.white};
+  margin-bottom: 10px;
+  border-radius: ${props => props.theme.borderRadius.small};
+  font-size: ${props => props.theme.fontSizes.small};
+`;
+
 // Footer con información de actualización
 const TableFooter = styled.div`
   padding: ${props => props.theme.spacing.md};
@@ -157,13 +177,14 @@ const UpdateIndicator = styled.div`
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background-color: ${props => props.isLive ? props.theme.colors.success : props.theme.colors.gray};
+    background-color: ${props => props.syncMethod !== 'unavailable' ? props.theme.colors.success : props.theme.colors.error};
     margin-right: ${props => props.theme.spacing.xs};
   }
 `;
 
 /**
- * Componente RankingTable para mostrar clasificaciones en tiempo real
+ * Componente RealtimeRankingTable para mostrar rankings en tiempo real
+ * Utiliza WebSockets y Firebase para actualizaciones
  * 
  * @param {Object} props - Propiedades del componente
  * @param {string} props.competitionId - ID de la competencia
@@ -172,96 +193,100 @@ const UpdateIndicator = styled.div`
  * @param {boolean} [props.showAnimation=true] - Si mostrar animaciones de cambio de posición
  * @param {boolean} [props.showChangeIndicator=true] - Si mostrar indicadores de cambio
  */
-const RankingTable = ({
+const RealtimeRankingTable = ({
   competitionId,
   title,
   subtitle,
   showAnimation = true,
   showChangeIndicator = true
 }) => {
-  // Estado para almacenar los rankings
+  // Estado para rankings
   const [rankings, setRankings] = useState([]);
-  // Estado para almacenar la última actualización
-  const [lastUpdate, setLastUpdate] = useState(null);
-  // Estado para almacenar el estado de conexión
-  const [isLive, setIsLive] = useState(true);
-  // Ref para almacenar las posiciones anteriores
+  // Estado para la última actualización
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+  // Ref para posiciones anteriores
   const prevPositionsRef = useRef({});
   
-  // Suscribirse a los rankings en tiempo real
+  // Usar el hook de sincronización en tiempo real
+  const { 
+    isOnline, 
+    syncMethod,
+    subscribeToRealtimeRankings 
+  } = useRealtimeSync();
+  
+  // Suscribirse a actualizaciones de rankings
   useEffect(() => {
-    if (!competitionId) return;
+    if (!competitionId) return () => {};
     
-    // Función para manejar actualizaciones
-    const handleRankingUpdate = (data) => {
-      if (!data) {
-        setIsLive(false);
+    const handleRankingsUpdate = (data) => {
+      if (!data || !Array.isArray(data)) {
+        console.warn('Datos de rankings inválidos:', data);
         return;
       }
       
-      // Convertir a array y ordenar por porcentaje
-      const rankingsArray = Object.entries(data).map(([id, entry]) => ({
-        id,
-        ...entry
-      })).sort((a, b) => b.percentage - a.percentage);
-      
-      // Añadir movimientos y cambios
-      const updated = rankingsArray.map((entry, index) => {
-        const position = index + 1;
-        const prevPosition = prevPositionsRef.current[entry.id] || 0;
+      // Procesar los rankings y añadir animaciones
+      const processedRankings = data.map(ranking => {
+        const participantId = ranking.participantId || ranking.participant_id;
+        const prevPosition = prevPositionsRef.current[participantId] || 0;
+        const currentPosition = ranking.position;
         
         let direction = 'none';
         let change = 'same';
         
         if (showAnimation) {
-          // Determinar dirección de animación
           if (prevPosition === 0) {
             direction = 'new';
-          } else if (prevPosition > position) {
+          } else if (prevPosition > currentPosition) {
             direction = 'up';
             change = 'better';
-          } else if (prevPosition < position) {
+          } else if (prevPosition < currentPosition) {
             direction = 'down';
             change = 'worse';
           }
         }
         
         return {
-          ...entry,
-          position,
+          ...ranking,
           direction,
           change
         };
       });
       
-      // Actualizar estado
-      setRankings(updated);
+      setRankings(processedRankings);
       setLastUpdate(new Date());
-      setIsLive(true);
       
       // Actualizar posiciones anteriores
-      const positions = {};
-      updated.forEach(entry => {
-        positions[entry.id] = entry.position;
+      const newPositions = {};
+      processedRankings.forEach(ranking => {
+        const participantId = ranking.participantId || ranking.participant_id;
+        newPositions[participantId] = ranking.position;
       });
-      prevPositionsRef.current = positions;
+      prevPositionsRef.current = newPositions;
     };
     
-    // Suscribirse a Firebase
-    const unsubscribe = subscribeToRankings(competitionId, handleRankingUpdate);
+    // Suscribirse a ambos métodos de sincronización
+    const unsubscribe = subscribeToRealtimeRankings(competitionId, handleRankingsUpdate);
     
-    return () => unsubscribe();
-  }, [competitionId, showAnimation]);
+    return unsubscribe;
+  }, [competitionId, showAnimation, subscribeToRealtimeRankings]);
   
-  // Formatear fecha de última actualización
+  // Formatear la hora de última actualización
   const formatLastUpdate = () => {
-    if (!lastUpdate) return 'Sin datos';
-    
     return lastUpdate.toLocaleTimeString('es-BO', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit'
     });
+  };
+  
+  // Obtener texto según el método de sincronización
+  const getSyncMethodText = () => {
+    switch (syncMethod) {
+      case 'firebase': return 'Sincronización vía Firebase';
+      case 'websocket': return 'Sincronización vía WebSocket';
+      case 'both': return 'Sincronización redundante (Firebase + WebSocket)';
+      default: return 'Sin conexión';
+    }
   };
   
   return (
@@ -270,6 +295,10 @@ const RankingTable = ({
         <Title>{title}</Title>
         {subtitle && <Subtitle>{subtitle}</Subtitle>}
       </TableHeading>
+      
+      <SyncIndicator syncMethod={syncMethod}>
+        {getSyncMethodText()}
+      </SyncIndicator>
       
       <Table>
         <thead>
@@ -283,7 +312,7 @@ const RankingTable = ({
         <tbody>
           {rankings.length > 0 ? (
             rankings.map(entry => (
-              <TableRow key={entry.id} direction={entry.direction}>
+              <TableRow key={entry.participantId || entry.participant_id} direction={entry.direction}>
                 <PositionCell>
                   {entry.position}
                   {showChangeIndicator && (
@@ -292,8 +321,10 @@ const RankingTable = ({
                     </ChangeIndicator>
                   )}
                 </PositionCell>
-                <TableCell>{entry.rider.firstName} {entry.rider.lastName}</TableCell>
-                <TableCell>{entry.horse.name}</TableCell>
+                <TableCell>
+                  {entry.rider?.firstName || entry.rider?.first_name} {entry.rider?.lastName || entry.rider?.last_name}
+                </TableCell>
+                <TableCell>{entry.horse?.name}</TableCell>
                 <PercentageCell>{formatPercentage(entry.percentage)}</PercentageCell>
               </TableRow>
             ))
@@ -308,9 +339,9 @@ const RankingTable = ({
       </Table>
       
       <TableFooter>
-        <UpdateIndicator isLive={isLive}>
+        <UpdateIndicator syncMethod={syncMethod}>
           <span />
-          {isLive ? 'Actualización en tiempo real' : 'Sin conexión'}
+          {isOnline ? 'Actualización en tiempo real' : 'Sin conexión'}
         </UpdateIndicator>
         <div>Última actualización: {formatLastUpdate()}</div>
       </TableFooter>
@@ -318,4 +349,4 @@ const RankingTable = ({
   );
 };
 
-export default RankingTable;
+export default RealtimeRankingTable;
