@@ -1,14 +1,6 @@
-# test_websockets.py
-import os
-import sys
-import django
 import asyncio
 import websockets
 import json
-
-# Configurar entorno Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ecuestre_project.settings')
-django.setup()
 
 async def test_websocket_connection():
     """Prueba la conexión WebSocket para rankings"""
@@ -16,8 +8,8 @@ async def test_websocket_connection():
     print("=== Prueba de Conexión WebSocket para Rankings ===")
     
     try:
-        # Conectar al WebSocket (ajusta el host y puerto según tu configuración)
-        uri = "ws://localhost:8000/ws/rankings/1/"
+        # Conectar al WebSocket
+        uri = "ws://127.0.0.1:8000/ws/rankings/1/"
         async with websockets.connect(uri) as websocket:
             print("Conexión establecida exitosamente!")
             
@@ -39,11 +31,15 @@ async def test_websocket_connection():
                     print(f"Rankings recibidos: {len(data.get('rankings', []))}")
                     
                     # Mostrar algunos datos
-                    print("\nDatos de rankings:")
-                    for i, ranking in enumerate(data.get('rankings', [])[:3]):  # Mostrar máximo 3
-                        print(f"{i+1}. Posición: {ranking.get('position')}, " +
-                              f"Porcentaje: {ranking.get('percentage')}%, " +
-                              f"Jinete: {ranking.get('rider', {}).get('name')}")
+                    rankings = data.get('rankings', [])
+                    if rankings:
+                        print("\nDatos de rankings:")
+                        for i, ranking in enumerate(rankings[:3]):  # Mostrar máximo 3
+                            print(f"{i+1}. Posición: {ranking.get('position')}, " +
+                                f"Porcentaje: {ranking.get('percentage')}%, " +
+                                f"Jinete: {ranking.get('rider', {}).get('name', 'Desconocido')}")
+                    else:
+                        print("No se recibieron rankings.")
                 else:
                     print(f"Respuesta inesperada: {data}")
             except asyncio.TimeoutError:

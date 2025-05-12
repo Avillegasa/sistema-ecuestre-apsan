@@ -14,12 +14,11 @@ class ScoreConsumer(AsyncWebsocketConsumer):
     """
     
     async def connect(self):
-        # Obtener IDs de la URL
+        # Obtener ID de competencia de la URL
         self.competition_id = self.scope['url_route']['kwargs']['competition_id']
-        self.participant_id = self.scope['url_route']['kwargs']['participant_id']
         
-        # Crear nombre de grupo único para esta competencia y participante
-        self.room_group_name = f'scores_{self.competition_id}_{self.participant_id}'
+        # Crear nombre de grupo único para esta competencia
+        self.room_group_name = f'rankings_{self.competition_id}'
         
         # Unirse al grupo
         await self.channel_layer.group_add(
@@ -28,15 +27,14 @@ class ScoreConsumer(AsyncWebsocketConsumer):
         )
         
         await self.accept()
-        logger.info(f"WebSocket conectado: {self.room_group_name}")
-
+        await self.send_current_rankings()
+    
     async def disconnect(self, close_code):
         # Salir del grupo al desconectar
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
-        logger.info(f"WebSocket desconectado: {self.room_group_name}, código: {close_code}")
 
     async def receive(self, text_data):
         """
@@ -212,53 +210,42 @@ class RankingConsumer(AsyncWebsocketConsumer):
         )
         
         await self.accept()
-        logger.info(f"WebSocket de rankings conectado: {self.room_group_name}")
-        
-        # Enviar rankings actuales al conectar
         await self.send_current_rankings()
-
+    
     async def disconnect(self, close_code):
         # Salir del grupo al desconectar
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
-        logger.info(f"WebSocket de rankings desconectado: {self.room_group_name}, código: {close_code}")
-
+    
     async def receive(self, text_data):
         """
         Recibir mensaje desde WebSocket
         """
         try:
             data = json.loads(text_data)
-            
-            # Procesar el mensaje según su tipo
             message_type = data.get('type')
             
             if message_type == 'request_rankings':
-                # El cliente solicita rankings actuales
                 await self.send_current_rankings()
                 
-        except json.JSONDecodeError:
-            logger.error(f"Error al decodificar JSON: {text_data}")
         except Exception as e:
-            logger.error(f"Error en receive: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': str(e)
+            }))
     
     @database_sync_to_async
     def get_current_rankings(self):
-        """
-        Obtener rankings actuales para esta competencia
-        """
         from judging.models import Ranking
         
-        # Obtener todos los rankings para esta competencia
         rankings = Ranking.objects.filter(
             competition_id=self.competition_id
         ).select_related(
             'participant', 'participant__rider', 'participant__horse'
         ).order_by('position')
         
-        # Formatear para enviar por WebSocket
         result = []
         for ranking in rankings:
             participant = ranking.participant
@@ -280,10 +267,7 @@ class RankingConsumer(AsyncWebsocketConsumer):
                     'id': horse.id,
                     'name': horse.name,
                     'breed': horse.breed or ''
-                },
-                'number': participant.number,
-                'order': participant.order,
-                'withdrawn': participant.is_withdrawn
+                }
             })
         
         return result
