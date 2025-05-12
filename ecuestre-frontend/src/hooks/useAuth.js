@@ -1,44 +1,22 @@
-import { useState, useEffect, useContext } from 'react';
+// src/hooks/useAuth.js
+import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { login as apiLogin, getProfile } from '../services/api';
+import { login as apiLogin } from '../services/api';
 
-// Hook personalizado para gestionar la autenticación
+/**
+ * Hook personalizado para gestionar la autenticación
+ * Proporciona funciones para iniciar sesión y verificar el estado de autenticación
+ */
 const useAuth = () => {
-  const { user, setUser, isAuthenticated, setIsAuthenticated } = useContext(AuthContext);
-  const [loading, setLoading] = useState(true);
+  const { setUser, setIsAuthenticated } = useContext(AuthContext);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // Verificar token al cargar
-  useEffect(() => {
-    const checkAuth = async () => {
-      setLoading(true);
-      const token = localStorage.getItem('authToken');
-      
-      if (token) {
-        try {
-          // Verificar si el token es válido obteniendo el perfil del usuario
-          const response = await getProfile();
-          setUser(response.data);
-          setIsAuthenticated(true);
-        } catch (err) {
-          console.error('Error al verificar autenticación:', err);
-          // Si hay error, limpiar el token
-          localStorage.removeItem('authToken');
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-      }
-      
-      setLoading(false);
-    };
-    
-    checkAuth();
-  }, [setUser, setIsAuthenticated]);
-
-  // Función para iniciar sesión
+  
+  /**
+   * Función para iniciar sesión
+   * @param {Object} credentials - Credenciales (email, password)
+   * @returns {Object} - Resultado de la operación
+   */
   const login = async (credentials) => {
     setLoading(true);
     setError(null);
@@ -50,35 +28,32 @@ const useAuth = () => {
       // Guardar token en localStorage
       localStorage.setItem('authToken', token);
       
-      // Actualizar el estado
+      // Actualizar contexto
       setUser(user);
       setIsAuthenticated(true);
-      setLoading(false);
       
+      setLoading(false);
       return { success: true };
     } catch (err) {
       console.error('Error de login:', err);
-      setError(err.response?.data?.message || 'Error al iniciar sesión');
+      
+      const errorMessage = err.response?.data?.message || 
+                          'No se pudo iniciar sesión. Verifique sus credenciales.';
+      
+      setError(errorMessage);
       setLoading(false);
       
-      return { success: false, error: err.response?.data?.message || 'Error al iniciar sesión' };
+      return { 
+        success: false, 
+        error: errorMessage 
+      };
     }
   };
-
-  // Función para cerrar sesión
-  const logout = () => {
-    localStorage.removeItem('authToken');
-    setUser(null);
-    setIsAuthenticated(false);
-  };
-
+  
   return {
-    user,
-    isAuthenticated,
-    loading,
-    error,
     login,
-    logout
+    loading,
+    error
   };
 };
 

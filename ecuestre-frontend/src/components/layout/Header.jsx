@@ -1,3 +1,4 @@
+// src/components/layout/Header.jsx
 import React, { useState, useContext } from 'react';
 import styled from 'styled-components';
 import { Link, useNavigate } from 'react-router-dom';
@@ -143,9 +144,10 @@ const OfflineIndicator = styled.div`
  * Componente Header para la navegación principal
  * 
  * @param {Object} props - Propiedades del componente
+ * @param {Function} props.toggleSidebar - Función para mostrar/ocultar el sidebar en móviles
  * @param {boolean} [props.isOffline=false] - Indica si la aplicación está en modo offline
  */
-const Header = ({ isOffline = false }) => {
+const Header = ({ toggleSidebar, isOffline = false }) => {
   const { isAuthenticated, user, logout } = useContext(AuthContext);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();

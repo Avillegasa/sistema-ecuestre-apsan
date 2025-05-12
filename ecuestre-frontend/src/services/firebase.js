@@ -1,3 +1,4 @@
+// src/services/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, onValue, set, update, off } from 'firebase/database';
 
@@ -62,35 +63,9 @@ export const checkOnlineStatus = (callback) => {
   return () => off(connectedRef);
 };
 
-// Escuchar cambios en calificaciones específicas
-export const listenToJudgeScores = (competitionId, participantId, judgeId, callback) => {
-  const scoreRef = ref(database, `scores/${competitionId}/${participantId}/${judgeId}/parameters`);
-  
-  onValue(scoreRef, (snapshot) => {
-    const data = snapshot.val();
-    callback(data);
-  });
-  
-  return () => off(scoreRef);
-};
-
-// Escuchar cambios en el ranking de un participante específico
-export const listenToParticipantRanking = (competitionId, participantId, callback) => {
-  const rankingRef = ref(database, `rankings/${competitionId}/${participantId}`);
-  
-  onValue(rankingRef, (snapshot) => {
-    const data = snapshot.val();
-    callback(data);
-  });
-  
-  return () => off(rankingRef);
-};
-
 export default {
   subscribeToRankings,
   subscribeToScores,
   updateScore,
-  checkOnlineStatus,
-  listenToJudgeScores,
-  listenToParticipantRanking
+  checkOnlineStatus
 };

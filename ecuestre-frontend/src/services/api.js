@@ -1,6 +1,7 @@
+// src/services/api.js
 import axios from 'axios';
 
-// Determinar el baseURL según el entorno
+// Determinar la URL base según el entorno
 const baseURL = process.env.NODE_ENV === 'production'
   ? 'https://sistema-ecuestre.apsan.org/api'
   : 'http://localhost:8000/api';
@@ -62,16 +63,16 @@ export const fetchCompetitions = () => api.get('/competitions/');
 export const fetchCompetition = (id) => api.get(`/competitions/${id}/`);
 export const fetchRankings = (competitionId) => api.get(`/judging/rankings/${competitionId}/`);
 export const fetchScorecard = (competitionId, participantId) => {
-  return api.get(`/judging/score/${competitionId}/${participantId}/`);
+  return api.get(`/judging/scorecard/${competitionId}/${participantId}/`);
 };
 export const submitScore = (competitionId, participantId, scoreData) => {
-  return api.post(`/judging/score/${competitionId}/${participantId}/`, scoreData);
+  return api.post(`/judging/scorecard/${competitionId}/${participantId}/`, scoreData);
 };
 
 // Servicios de autenticación
 export const login = (credentials) => api.post('/users/login/', credentials);
 export const register = (userData) => api.post('/users/register/', userData);
-export const getProfile = () => api.get('/users/profile/');
+export const getProfile = () => api.get('/users/me/');
 
 // Exportar la instancia de api para uso personalizado
 export default api;

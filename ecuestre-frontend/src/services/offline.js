@@ -1,3 +1,4 @@
+// src/services/offline.js
 // Servicio para gestionar la funcionalidad offline
 
 // Abrir IndexedDB

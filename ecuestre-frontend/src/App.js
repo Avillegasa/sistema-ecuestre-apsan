@@ -1,42 +1,95 @@
+// src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import GlobalStyles from './styles/GlobalStyles';
 import theme from './styles/theme';
+import { AuthProvider } from './context/AuthContext';
+import { CompetitionProvider } from './context/CompetitionContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+
+// Páginas
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Unauthorized from './pages/Unauthorized';
 import FEIHelpPage from './pages/FEIHelpPage';
 
-// Importar páginas (se implementarán más adelante)
-// import Home from './pages/Home';
-// import Login from './pages/Login';
-// import CompetitionList from './pages/CompetitionList';
-// import CompetitionDetail from './pages/CompetitionDetail';
-// import JudgingPanel from './pages/JudgingPanel';
-// import RankingBoard from './pages/RankingBoard';
-
-// Componente temporal mientras se desarrollan las páginas
-const TemporaryPage = ({ name }) => (
-  <div style={{ padding: '20px', textAlign: 'center' }}>
-    <h1>Sistema Ecuestre APSAN</h1>
-    <p>Página: {name}</p>
-    <p>Esta página está en desarrollo.</p>
-  </div>
-);
+// Páginas de Competencias (importaremos temporalmente componentes de carga)
+const CompetitionList = () => <div>Lista de Competencias (en desarrollo)</div>;
+const CompetitionDetail = () => <div>Detalle de Competencia (en desarrollo)</div>;
+const JudgingPanel = () => <div>Panel de Jueces (en desarrollo)</div>;
+const RankingBoard = () => <div>Tabla de Rankings (en desarrollo)</div>;
+const AdminPanel = () => <div>Panel de Administración (en desarrollo)</div>;
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyles />
-      <Router>
-        <Routes>
-          <Route path="/" element={<TemporaryPage name="Inicio" />} />
-          <Route path="/login" element={<TemporaryPage name="Login" />} />
-          <Route path="/competitions" element={<TemporaryPage name="Lista de Competencias" />} />
-          <Route path="/competitions/:id" element={<TemporaryPage name="Detalle de Competencia" />} />
-          <Route path="/judging/:competition_id/:participant_id" element={<TemporaryPage name="Panel de Jueces" />} />
-          <Route path="/rankings/:competition_id" element={<TemporaryPage name="Tabla de Rankings" />} />
-          <Route path="/help/fei" element={<FEIHelpPage />} />
-        </Routes>
-      </Router>
+      <AuthProvider>
+        <CompetitionProvider>
+          <Router>
+            <Routes>
+              {/* Rutas públicas */}
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/unauthorized" element={<Unauthorized />} />
+              <Route path="/help/fei" element={<FEIHelpPage />} />
+              
+              {/* Rutas protegidas (requieren autenticación) */}
+              <Route 
+                path="/competitions" 
+                element={
+                  <ProtectedRoute>
+                    <CompetitionList />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route 
+                path="/competitions/:id" 
+                element={
+                  <ProtectedRoute>
+                    <CompetitionDetail />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Rutas para jueces */}
+              <Route 
+                path="/judging/:competition_id/:participant_id" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'judge']}>
+                    <JudgingPanel />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Rutas para rankings */}
+              <Route 
+                path="/rankings/:competition_id" 
+                element={
+                  <ProtectedRoute>
+                    <RankingBoard />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Rutas para administradores */}
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminPanel />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Ruta 404 */}
+              <Route path="*" element={<div>Página no encontrada</div>} />
+            </Routes>
+          </Router>
+        </CompetitionProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

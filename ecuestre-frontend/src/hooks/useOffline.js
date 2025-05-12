@@ -1,13 +1,12 @@
+// src/hooks/useOffline.js
 import { useState, useEffect, useCallback } from 'react';
-import { checkOnlineStatus } from '../services/firebase';
-import { 
-  getPendingScores, 
-  removePendingScore, 
-  saveScoreOffline 
-} from '../services/offline';
+import { getPendingScores, removePendingScore, saveScoreOffline } from '../services/offline';
 import { submitScore } from '../services/api';
 
-// Hook personalizado para gestionar la funcionalidad offline
+/**
+ * Hook personalizado para gestionar la funcionalidad offline
+ * Proporciona funciones para guardar datos offline y sincronizar cuando vuelva la conexión
+ */
 const useOffline = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingActions, setPendingActions] = useState([]);
@@ -21,15 +20,9 @@ const useOffline = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // También usar Firebase para detección más precisa
-    const unsubscribe = checkOnlineStatus((status) => {
-      setIsOnline(status);
-    });
-    
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      unsubscribe();
     };
   }, []);
   

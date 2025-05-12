@@ -1,3 +1,4 @@
+// src/components/layout/Sidebar.jsx
 import React, { useContext } from 'react';
 import styled from 'styled-components';
 import { Link, useLocation } from 'react-router-dom';
