@@ -1,6 +1,12 @@
 # initialize_data.py
 import os
 import django
+import environ
+
+env = environ.Env()
+env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+environ.Env.read_env(env_file)
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ecuestre_project.settings')
 django.setup()
 
