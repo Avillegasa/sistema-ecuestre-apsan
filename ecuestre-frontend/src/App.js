@@ -1,4 +1,4 @@
-// src/App.js
+// src/App.js (actualizado)
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
@@ -14,9 +14,14 @@ import Login from './pages/Login';
 import Unauthorized from './pages/Unauthorized';
 import FEIHelpPage from './pages/FEIHelpPage';
 
-// Páginas de Competencias (importaremos temporalmente componentes de carga)
-const CompetitionList = () => <div>Lista de Competencias (en desarrollo)</div>;
-const CompetitionDetail = () => <div>Detalle de Competencia (en desarrollo)</div>;
+// Páginas de Competencias (actualizadas)
+import CompetitionList from './pages/CompetitionList';
+import CompetitionDetail from './pages/CompetitionDetail';
+import CompetitionCreate from './pages/CompetitionCreate';
+import CompetitionEdit from './pages/CompetitionEdit';
+import ParticipantAdd from './pages/ParticipantAdd';
+
+// Otras páginas (temporales)
 const JudgingPanel = () => <div>Panel de Jueces (en desarrollo)</div>;
 const RankingBoard = () => <div>Tabla de Rankings (en desarrollo)</div>;
 const AdminPanel = () => <div>Panel de Administración (en desarrollo)</div>;
@@ -35,7 +40,7 @@ function App() {
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/help/fei" element={<FEIHelpPage />} />
               
-              {/* Rutas protegidas (requieren autenticación) */}
+              {/* Rutas de competencias */}
               <Route 
                 path="/competitions" 
                 element={
@@ -46,10 +51,37 @@ function App() {
               />
               
               <Route 
+                path="/competitions/new" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <CompetitionCreate />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route 
                 path="/competitions/:id" 
                 element={
                   <ProtectedRoute>
                     <CompetitionDetail />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route 
+                path="/competitions/:id/edit" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <CompetitionEdit />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route 
+                path="/competitions/:competitionId/participants/add" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <ParticipantAdd />
                   </ProtectedRoute>
                 } 
               />

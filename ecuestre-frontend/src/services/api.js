@@ -86,8 +86,6 @@ api.interceptors.response.use(
 );
 
 // Exportar métodos comunes
-export const fetchCompetitions = () => api.get('/competitions/');
-export const fetchCompetition = (id) => api.get(`/competitions/${id}/`);
 export const fetchRankings = (competitionId) => api.get(`/judging/rankings/${competitionId}/`);
 export const fetchScorecard = (competitionId, participantId) => {
   return api.get(`/judging/scorecard/${competitionId}/${participantId}/`);
@@ -103,3 +101,25 @@ export const getProfile = () => api.get('/users/me/');
 
 // Exportar la instancia de api para uso personalizado
 export default api;
+
+// Competencias
+export const fetchCompetitions = (params) => api.get('/competitions/', { params });
+export const fetchCompetition = (id) => api.get(`/competitions/${id}/`);
+export const createCompetition = (data) => api.post('/competitions/', data);
+export const updateCompetition = (id, data) => api.put(`/competitions/${id}/`, data);
+export const deleteCompetition = (id) => api.delete(`/competitions/${id}/`);
+
+// Participantes
+export const fetchParticipants = (competitionId) => api.get(`/competitions/${competitionId}/participants/`);
+export const assignParticipant = (competitionId, data) => api.post(`/competitions/${competitionId}/assign_participant/`, data);
+export const updateParticipant = (id, data) => api.put(`/participants/${id}/`, data);
+export const deleteParticipant = (id) => api.delete(`/participants/${id}/`);
+
+// Jinetes y Caballos
+export const fetchRiders = (params) => api.get('/competitions/riders/', { params });
+export const fetchHorses = (params) => api.get('/competitions/horses/', { params });
+export const fetchCategories = () => api.get('/competitions/categories/');
+
+// Jueces
+export const fetchJudges = () => api.get('/users/judges/');
+export const assignJudges = (competitionId, judgesData) => api.post(`/competitions/${competitionId}/assign_judges/`, judgesData);
