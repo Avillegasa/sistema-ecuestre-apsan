@@ -1,62 +1,10 @@
-// Crear un nuevo archivo: src/components/competitions/JudgeAssignmentForm.jsx
+// src/components/competitions/JudgeAssignmentForm.jsx
 
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { fetchJudges, assignJudges } from '../../services/api';
 import Button from '../common/Button';
-
-const FormContainer = styled.div`
-  background-color: ${props => props.theme.colors.white};
-  border-radius: ${props => props.theme.borderRadius.medium};
-  padding: ${props => props.theme.spacing.lg};
-`;
-
-const JudgesList = styled.div`
-  max-height: 300px;
-  overflow-y: auto;
-  margin-bottom: ${props => props.theme.spacing.lg};
-  border: 1px solid ${props => props.theme.colors.lightGray};
-  border-radius: ${props => props.theme.borderRadius.small};
-  padding: ${props => props.theme.spacing.md};
-`;
-
-const JudgeItem = styled.div`
-  display: flex;
-  align-items: center;
-  padding: ${props => props.theme.spacing.sm} 0;
-  border-bottom: 1px solid ${props => props.theme.colors.lightGray};
-  
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const JudgeCheckbox = styled.input`
-  margin-right: ${props => props.theme.spacing.md};
-`;
-
-const JudgeName = styled.div`
-  flex: 1;
-`;
-
-const HeadJudgeRadio = styled.input`
-  margin-left: ${props => props.theme.spacing.md};
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: ${props => props.theme.spacing.md};
-  margin-top: ${props => props.theme.spacing.lg};
-`;
-
-const ErrorMessage = styled.div`
-  background-color: ${props => props.theme.colors.errorLight};
-  color: ${props => props.theme.colors.error};
-  padding: ${props => props.theme.spacing.md};
-  border-radius: ${props => props.theme.borderRadius.small};
-  margin-bottom: ${props => props.theme.spacing.md};
-`;
+import Input from '../common/Input';
 
 const JudgeAssignmentForm = ({ competitionId, onSuccess, onCancel }) => {
   const [judges, setJudges] = useState([]);
@@ -65,6 +13,8 @@ const JudgeAssignmentForm = ({ competitionId, onSuccess, onCancel }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredJudges, setFilteredJudges] = useState([]);
   
   // Cargar jueces disponibles
   useEffect(() => {
@@ -73,6 +23,7 @@ const JudgeAssignmentForm = ({ competitionId, onSuccess, onCancel }) => {
       try {
         const response = await fetchJudges();
         setJudges(response.data);
+        setFilteredJudges(response.data);
       } catch (err) {
         setError('Error al cargar jueces: ' + err.message);
       } finally {
@@ -82,6 +33,22 @@ const JudgeAssignmentForm = ({ competitionId, onSuccess, onCancel }) => {
     
     loadJudges();
   }, []);
+  
+  // Filtrar jueces cuando cambia la búsqueda
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredJudges(judges);
+      return;
+    }
+    
+    const query = searchQuery.toLowerCase();
+    const filtered = judges.filter(judge => 
+      `${judge.first_name} ${judge.last_name}`.toLowerCase().includes(query) ||
+      judge.email.toLowerCase().includes(query)
+    );
+    
+    setFilteredJudges(filtered);
+  }, [searchQuery, judges]);
   
   // Manejar selección de juez
   const handleJudgeSelect = (judgeId, isSelected) => {
@@ -137,7 +104,7 @@ const JudgeAssignmentForm = ({ competitionId, onSuccess, onCancel }) => {
   };
   
   if (isLoading) {
-    return <div>Cargando jueces disponibles...</div>;
+    return <LoadingMessage>Cargando jueces disponibles...</LoadingMessage>;
   }
   
   return (
@@ -146,9 +113,19 @@ const JudgeAssignmentForm = ({ competitionId, onSuccess, onCancel }) => {
       
       <p>Seleccione los jueces para asignar a esta competencia:</p>
       
+      <SearchBox>
+        <Input
+          id="search-judges"
+          placeholder="Buscar jueces por nombre o email..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          fullWidth
+        />
+      </SearchBox>
+      
       <JudgesList>
-        {judges.length > 0 ? (
-          judges.map(judge => (
+        {filteredJudges.length > 0 ? (
+          filteredJudges.map(judge => (
             <JudgeItem key={judge.id}>
               <JudgeCheckbox
                 type="checkbox"
@@ -156,25 +133,33 @@ const JudgeAssignmentForm = ({ competitionId, onSuccess, onCancel }) => {
                 checked={selectedJudges.includes(judge.id)}
                 onChange={(e) => handleJudgeSelect(judge.id, e.target.checked)}
               />
-              <JudgeName>
-                {judge.first_name} {judge.last_name}
-              </JudgeName>
-              <label>
-                Juez Principal
-                <HeadJudgeRadio
-                  type="radio"
-                  name="headJudge"
-                  disabled={!selectedJudges.includes(judge.id)}
-                  checked={headJudge === judge.id}
-                  onChange={() => handleHeadJudgeSelect(judge.id)}
-                />
-              </label>
+              <JudgeDetails>
+                <JudgeName>{judge.first_name} {judge.last_name}</JudgeName>
+                <JudgeEmail>{judge.email}</JudgeEmail>
+              </JudgeDetails>
+              <HeadJudgeContainer>
+                <label>
+                  Juez Principal
+                  <HeadJudgeRadio
+                    type="radio"
+                    name="headJudge"
+                    disabled={!selectedJudges.includes(judge.id)}
+                    checked={headJudge === judge.id}
+                    onChange={() => handleHeadJudgeSelect(judge.id)}
+                  />
+                </label>
+              </HeadJudgeContainer>
             </JudgeItem>
           ))
         ) : (
-          <p>No hay jueces disponibles</p>
+          <EmptyMessage>No se encontraron jueces con esos criterios</EmptyMessage>
         )}
       </JudgesList>
+      
+      <JudgeCounter>
+        {selectedJudges.length} jueces seleccionados
+        {headJudge && ` (1 juez principal)`}
+      </JudgeCounter>
       
       <ActionButtons>
         <Button
@@ -194,5 +179,102 @@ const JudgeAssignmentForm = ({ competitionId, onSuccess, onCancel }) => {
     </FormContainer>
   );
 };
+
+// Estilos para el componente
+const FormContainer = styled.div`
+  background-color: white;
+  border-radius: 8px;
+  padding: 24px;
+`;
+
+const SearchBox = styled.div`
+  margin-bottom: 16px;
+`;
+
+const JudgesList = styled.div`
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  border: 1px solid ${props => props.theme.colors.lightGray};
+  border-radius: 4px;
+  padding: 16px;
+`;
+
+const JudgeItem = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid ${props => props.theme.colors.lightGray};
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const JudgeCheckbox = styled.input`
+  margin-right: 16px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+`;
+
+const JudgeDetails = styled.div`
+  flex: 1;
+`;
+
+const JudgeName = styled.div`
+  font-weight: 500;
+`;
+
+const JudgeEmail = styled.div`
+  font-size: 14px;
+  color: ${props => props.theme.colors.gray};
+`;
+
+const HeadJudgeContainer = styled.div`
+  display: flex;
+  align-items: center;
+  margin-left: 16px;
+`;
+
+const HeadJudgeRadio = styled.input`
+  margin-left: 8px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+`;
+
+const JudgeCounter = styled.div`
+  font-size: 14px;
+  color: ${props => props.theme.colors.gray};
+  margin-bottom: 16px;
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+`;
+
+const ErrorMessage = styled.div`
+  background-color: ${props => props.theme.colors.errorLight};
+  color: ${props => props.theme.colors.error};
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+`;
+
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 24px;
+  color: ${props => props.theme.colors.gray};
+`;
+
+const EmptyMessage = styled.div`
+  text-align: center;
+  padding: 24px;
+  color: ${props => props.theme.colors.gray};
+`;
 
 export default JudgeAssignmentForm;
