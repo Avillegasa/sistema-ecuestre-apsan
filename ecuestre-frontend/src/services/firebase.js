@@ -1,4 +1,4 @@
-// src/services/firebase.js
+// Asegúrate de que las importaciones sean correctas
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, onValue, set, update, off } from 'firebase/database';
 

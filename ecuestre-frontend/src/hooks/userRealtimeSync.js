@@ -1,4 +1,4 @@
-// Simplificar src/hooks/useRealtimeSync.js a una versión básica que solo use Firebase
+// src/hooks/useRealtimeSync.js
 import { useState, useEffect, useCallback } from 'react';
 import { 
   subscribeToRankings, 
