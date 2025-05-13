@@ -170,7 +170,7 @@ export const useRealtimeSync = () => {
       .catch(error => {
         console.error('Error al enviar calificación:', error);
         // Si falla la API REST, intentar guardar offline
-        import('../hooks/useOffline').then(module => {
+        import('./useOffline').then(module => {
           const saveScoreOffline = module.saveScoreOffline;
           saveScoreOffline(competitionId, participantId, judgeId, scoreData);
         });
