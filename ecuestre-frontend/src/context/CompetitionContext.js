@@ -28,25 +28,43 @@ export const CompetitionProvider = ({ children }) => {
         
         // Guardar datos para uso offline
         try {
-          const { saveCompetitionData } = await import('../services/offline');
+          const { saveCompetitionData, saveParticipantsData } = await import('../services/offline');
           await saveCompetitionData(competitionData);
-        } catch (err) {
-          console.error("Error guardando datos offline:", err);
+          
+          // También guardar participantes para uso offline si existen
+          if (competitionData.participants && competitionData.participants.length > 0) {
+            await saveParticipantsData(competitionData.participants);
+          }
+        } catch (offlineErr) {
+          console.warn("No se pudieron guardar datos para uso offline:", offlineErr.message);
         }
       } catch (onlineError) {
-        console.log("Error obteniendo datos online:", onlineError);
+        console.warn("No se pudieron obtener datos online:", onlineError.message);
         
         // Si falla la conexión, intentar cargar datos offline
-        try {
-          const { getOfflineCompetition } = await import('../services/offline');
-          competitionData = await getOfflineCompetition(competitionId);
-          
-          if (!competitionData) {
-            throw new Error('No se pudieron obtener los datos de la competencia');
+        if (!forceRefresh) { // Solo intentar cargar desde offline si no es una actualización forzada
+          try {
+            const { getOfflineCompetition, getOfflineParticipants } = await import('../services/offline');
+            competitionData = await getOfflineCompetition(competitionId);
+            
+            if (!competitionData) {
+              throw new Error('No hay datos disponibles de esta competencia');
+            }
+            
+            // Intentar cargar participantes offline
+            try {
+              const offlineParticipants = await getOfflineParticipants(competitionId);
+              if (offlineParticipants && offlineParticipants.length > 0) {
+                competitionData.participants = offlineParticipants;
+              }
+            } catch (participantsError) {
+              console.warn("Error al cargar participantes offline:", participantsError.message);
+            }
+          } catch (offlineError) {
+            throw new Error('No se pudo conectar al servidor y no hay datos guardados localmente');
           }
-        } catch (offlineError) {
-          console.error("Error obteniendo datos offline:", offlineError);
-          throw new Error('No se pudo conectar al servidor ni recuperar datos offline');
+        } else {
+          throw new Error('No se pudo conectar al servidor para obtener datos actualizados');
         }
       }
       
@@ -58,7 +76,7 @@ export const CompetitionProvider = ({ children }) => {
       return competitionData;
     } catch (err) {
       console.error('Error al cargar la competencia:', err);
-      setError(err.message || 'Error al cargar la competencia');
+      setError(err.message || 'Error al cargar los datos de la competencia');
       setLoading(false);
       return null;
     }
@@ -71,6 +89,62 @@ export const CompetitionProvider = ({ children }) => {
     setJudges([]);
   };
 
+  // Añadir participante localmente (para actualización optimista)
+  const addParticipantLocally = (participant) => {
+    setParticipants(prev => [...prev, participant]);
+    
+    // Actualizar también en la competencia actual
+    if (currentCompetition) {
+      setCurrentCompetition(prev => ({
+        ...prev,
+        participants: [...(prev.participants || []), participant]
+      }));
+    }
+  };
+
+  // Actualizar participante localmente
+  const updateParticipantLocally = (participantId, updatedData) => {
+    setParticipants(prev => 
+      prev.map(p => p.id === participantId ? { ...p, ...updatedData } : p)
+    );
+    
+    // Actualizar también en la competencia actual
+    if (currentCompetition && currentCompetition.participants) {
+      setCurrentCompetition(prev => ({
+        ...prev,
+        participants: prev.participants.map(p => 
+          p.id === participantId ? { ...p, ...updatedData } : p
+        )
+      }));
+    }
+  };
+
+  // Añadir juez localmente
+  const addJudgeLocally = (judge) => {
+    setJudges(prev => [...prev, judge]);
+    
+    // Actualizar también en la competencia actual
+    if (currentCompetition) {
+      setCurrentCompetition(prev => ({
+        ...prev,
+        judges: [...(prev.judges || []), judge]
+      }));
+    }
+  };
+
+  // Eliminar juez localmente
+  const removeJudgeLocally = (judgeId) => {
+    setJudges(prev => prev.filter(j => j.judge_details.id !== judgeId));
+    
+    // Actualizar también en la competencia actual
+    if (currentCompetition && currentCompetition.judges) {
+      setCurrentCompetition(prev => ({
+        ...prev,
+        judges: prev.judges.filter(j => j.judge_details.id !== judgeId)
+      }));
+    }
+  };
+
   return (
     <CompetitionContext.Provider value={{ 
       currentCompetition,
@@ -79,7 +153,11 @@ export const CompetitionProvider = ({ children }) => {
       loading,
       error,
       loadCompetition,
-      clearCompetition
+      clearCompetition,
+      addParticipantLocally,
+      updateParticipantLocally,
+      addJudgeLocally,
+      removeJudgeLocally
     }}>
       {children}
     </CompetitionContext.Provider>

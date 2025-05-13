@@ -169,6 +169,32 @@ export const getOfflineCompetition = async (competitionId) => {
   }
 };
 
+// Obtener todas las competencias guardadas offline
+export const getOfflineCompetitions = async () => {
+  try {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['competitions'], 'readonly');
+      const store = transaction.objectStore('competitions');
+      const request = store.getAll();
+      
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      
+      request.onerror = (event) => {
+        console.error('Error al obtener competencias offline:', event.target.error);
+        reject(event.target.error);
+      };
+    });
+  } catch (error) {
+    console.error('Error en getOfflineCompetitions:', error);
+    throw error;
+  }
+};
+
+
+
 // Guardar datos de participantes para uso offline
 export const saveParticipantsData = async (participants) => {
   try {
@@ -224,6 +250,7 @@ export const getOfflineParticipants = async (competitionId) => {
   }
 };
 
+
 export default {
   saveScoreOffline,
   getPendingScores,
@@ -231,5 +258,6 @@ export default {
   saveCompetitionData,
   getOfflineCompetition,
   saveParticipantsData,
-  getOfflineParticipants
+  getOfflineParticipants,
+  getOfflineCompetitions
 };

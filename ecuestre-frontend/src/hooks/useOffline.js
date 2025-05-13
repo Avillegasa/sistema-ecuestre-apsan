@@ -52,7 +52,9 @@ const useOffline = () => {
     try {
       if (isOnline) {
          // Si está online, importar dinámicamente la API para evitar dependencia circular
-        const { submitScore } = await import('../services/api');
+        const apiModule = await import('../services/api');
+        const submitScore = apiModule.submitScore;
+        
         await submitScore(competitionId, participantId, {
           judge_id: judgeId,
           scores: scoreData

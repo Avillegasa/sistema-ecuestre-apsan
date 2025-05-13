@@ -341,15 +341,17 @@ const CompetitionForm = ({ initialData, isEditing = false }) => {
           <Button
             type="submit"
             variant="primary"
-            disabled={isSubmitting || !isOnline}
-          >
+            disabled={isSubmitting || (!isOnline && !isEditing)} // Permitir edición offline de competencias existentes
+            >
             {isSubmitting 
-              ? 'Guardando...' 
-              : isEditing 
-                ? 'Actualizar Competencia' 
-                : 'Crear Competencia'
+                ? 'Guardando...' 
+                : !isOnline 
+                ? 'Guardar Localmente (se sincronizará al conectarse)' 
+                : isEditing 
+                    ? 'Actualizar Competencia' 
+                    : 'Crear Competencia'
             }
-          </Button>
+            </Button>
         </ActionButtons>
       </form>
     </FormContainer>

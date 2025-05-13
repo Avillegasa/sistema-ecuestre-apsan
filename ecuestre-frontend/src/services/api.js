@@ -126,7 +126,11 @@ export const fetchJudges = () => api.get('/users/judges/');
 export const assignJudges = (competitionId, judgesData) => api.post(`/competitions/${competitionId}/assign_judges/`, judgesData);
 export const removeJudge = (competitionId, judgeId) => api.delete(`/competitions/${competitionId}/judges/${judgeId}/`);
 
-// Asignación de categorías
-export const assignCategories = (competitionId, categoriesData) => api.post(`/competitions/${competitionId}/categories/`, categoriesData);
+// Añadir esta función faltante
+export const assignCategories = (competitionId, categoriesData) => 
+  api.post(`/competitions/${competitionId}/categories/`, categoriesData);
+
+// Añadir a src/services/api.js
+export const web_fetch = (url) => api.get(`/web/fetch?url=${encodeURIComponent(url)}`);
 
 

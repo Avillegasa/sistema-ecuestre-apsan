@@ -342,22 +342,45 @@ const JudgingPanel = () => {
   
   // Guardar calificaciones
   const handleSave = async () => {
-    setSavedStatus('pending');
+  setSavedStatus('pending');
+  
+  try {
+    // Preparar datos para enviar
+    const scoreData = {};
     
-    try {
-      // Esta funcionalidad se implementará completamente en la fase 3.3
-      alert('Función de guardado se implementará en la fase 3.3');
-      
-      // Simular guardado exitoso
-      setTimeout(() => {
-        setSavedStatus(isOnline ? 'saved' : 'offline');
-        setHasChanges(false);
-      }, 1000);
-    } catch (error) {
-      console.error('Error al guardar calificaciones:', error);
-      setSavedStatus('error');
-    }
-  };
+    parameters.forEach(param => {
+      if (scores[param.id] !== undefined) {
+        scoreData[param.id] = {
+          value: scores[param.id],
+          comments: comments[param.id] || '',
+        };
+      }
+    });
+    
+    // Importar dinámicamente para evitar ciclos de dependencia
+    const apiModule = await import('../services/api');
+    
+    // Enviar al servidor
+    await apiModule.submitScore(
+      competition_id,
+      participant_id,
+      {
+        judge_id: user.id,
+        scores: Object.entries(scoreData).map(([paramId, data]) => ({
+          parameter_id: parseInt(paramId),
+          value: data.value,
+          comments: data.comments
+        }))
+      }
+    );
+    
+    setSavedStatus(isOnline ? 'saved' : 'offline');
+    setHasChanges(false);
+  } catch (error) {
+    console.error('Error al guardar calificaciones:', error);
+    setSavedStatus('error');
+  }
+};
   
   // Navegar al participante anterior/siguiente
   const navigateToParticipant = (direction) => {

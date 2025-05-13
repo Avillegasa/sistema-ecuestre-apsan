@@ -191,18 +191,26 @@ const JudgingForm = () => {
   // Suscribirse a cambios en tiempo real
   useEffect(() => {
     if (!competitionId || !participantId || !user) return;
-    
-    const unsubscribe = subscribeToScores(
-      competitionId,
-      participantId,
-      (data) => {
-        if (data && data[user.id]) {
-          setScores(data[user.id]);
+  
+    try {
+      const unsubscribe = subscribeToScores(
+        competitionId,
+        participantId,
+        (data) => {
+          if (data && data[user.id]) {
+            setScores(data[user.id]);
+          }
         }
-      }
-    );
-    
-    return () => unsubscribe();
+      );
+      
+      return () => {
+        if (unsubscribe && typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      };
+    } catch (error) {
+      console.error('Error al suscribirse a puntuaciones:', error);
+    }
   }, [competitionId, participantId, user]);
   
   // Manejar guardado de calificaciones
