@@ -114,6 +114,7 @@ export const fetchParticipants = (competitionId) => api.get(`/competitions/${com
 export const assignParticipant = (competitionId, data) => api.post(`/competitions/${competitionId}/assign_participant/`, data);
 export const updateParticipant = (id, data) => api.put(`/participants/${id}/`, data);
 export const deleteParticipant = (id) => api.delete(`/participants/${id}/`);
+export const fetchParticipant = (id) => api.get(`/participants/${id}/`);
 
 // Jinetes y Caballos
 export const fetchRiders = (params) => api.get('/competitions/riders/', { params });
@@ -123,3 +124,9 @@ export const fetchCategories = () => api.get('/competitions/categories/');
 // Jueces
 export const fetchJudges = () => api.get('/users/judges/');
 export const assignJudges = (competitionId, judgesData) => api.post(`/competitions/${competitionId}/assign_judges/`, judgesData);
+export const removeJudge = (competitionId, judgeId) => api.delete(`/competitions/${competitionId}/judges/${judgeId}/`);
+
+// Asignación de categorías
+export const assignCategories = (competitionId, categoriesData) => api.post(`/competitions/${competitionId}/categories/`, categoriesData);
+
+

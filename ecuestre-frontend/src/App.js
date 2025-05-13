@@ -7,6 +7,9 @@ import theme from './styles/theme';
 import { AuthProvider } from './context/AuthContext';
 import { CompetitionProvider } from './context/CompetitionContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import ParticipantEdit from './pages/ParticipantEdit';
+import JudgingPanel from './pages/JudgingPanel';
+import RankingBoard from './pages/RankingBoard';
 
 // Páginas
 import Home from './pages/Home';
@@ -22,8 +25,6 @@ import CompetitionEdit from './pages/CompetitionEdit';
 import ParticipantAdd from './pages/ParticipantAdd';
 
 // Otras páginas (temporales)
-const JudgingPanel = () => <div>Panel de Jueces (en desarrollo)</div>;
-const RankingBoard = () => <div>Tabla de Rankings (en desarrollo)</div>;
 const AdminPanel = () => <div>Panel de Administración (en desarrollo)</div>;
 
 function App() {
@@ -49,7 +50,16 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
-              
+
+              <Route 
+                path="/competitions/:competitionId/participants/:participantId/edit" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <ParticipantEdit />
+                  </ProtectedRoute>
+                } 
+              />
+
               <Route 
                 path="/competitions/new" 
                 element={

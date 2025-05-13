@@ -215,44 +215,45 @@ const ParticipantForm = ({ competitionId, initialData, isEditing = false }) => {
   
   // Manejar envío del formulario
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Validar formulario
-    if (!validateForm()) {
-      return;
+  e.preventDefault();
+  
+  // Validar formulario
+  if (!validateForm()) {
+    return;
+  }
+  
+  setIsSubmitting(true);
+  setSubmitError(null);
+  
+  try {
+    if (!isOnline) {
+      throw new Error('No hay conexión a internet. No se puede guardar el participante.');
     }
     
-    setIsSubmitting(true);
-    setSubmitError(null);
+    let response;
     
-    try {
-      if (!isOnline) {
-        throw new Error('No hay conexión a internet. No se puede guardar el participante.');
-      }
-      
-      let response;
-      
-      if (isEditing) {
-        // Lógica para actualizar participante (a implementar)
-        alert('Funcionalidad de edición en desarrollo');
-      } else {
-        response = await assignParticipant(competitionId, formData);
-      }
-      
-      // Redireccionar a la página de detalle de la competencia
-      navigate(`/competitions/${competitionId}`);
-    } catch (error) {
-      console.error('Error al guardar el participante:', error);
-      
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          'Error al guardar el participante. Inténtelo nuevamente.';
-      
-      setSubmitError(errorMessage);
-    } finally {
-      setIsSubmitting(false);
+    if (isEditing) {
+      // Lógica para actualizar participante
+      const { updateParticipant } = await import('../../services/api');
+      response = await updateParticipant(initialData.id, formData);
+    } else {
+      response = await assignParticipant(competitionId, formData);
     }
-  };
+    
+    // Redireccionar a la página de detalle de la competencia
+    navigate(`/competitions/${competitionId}`);
+  } catch (error) {
+    console.error('Error al guardar el participante:', error);
+    
+    const errorMessage = error.response?.data?.message || 
+                        error.message || 
+                        'Error al guardar el participante. Inténtelo nuevamente.';
+    
+    setSubmitError(errorMessage);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   
   // Si está cargando, mostrar mensaje
   if (isLoading) {

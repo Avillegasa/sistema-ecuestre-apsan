@@ -9,6 +9,9 @@ import { CompetitionContext } from '../context/CompetitionContext';
 import { AuthContext } from '../context/AuthContext';
 import { fetchCompetition } from '../services/api';
 import useOffline from '../hooks/useOffline';
+import JudgeAssignmentForm from '../components/competitions/JudgeAssignmentForm';
+import CategoryAssignmentForm from '../components/competitions/CategoryAssignmentForm';
+import { removeJudge } from '../services/apiJudges';
 
 // Contenedor principal
 const DetailContainer = styled.div`
@@ -253,6 +256,8 @@ const CompetitionDetail = () => {
   
   const [activeTab, setActiveTab] = useState('participants');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showJudgeAssignmentModal, setShowJudgeAssignmentModal] = useState(false);
+  const [showCategoryAssignmentModal, setShowCategoryAssignmentModal] = useState(false);
   
   // Cargar datos de la competencia
   useEffect(() => {
@@ -271,6 +276,13 @@ const CompetitionDetail = () => {
       (currentCompetition && currentCompetition.creator === user.id)
     );
   };
+
+  // Añadir esta función dentro del componente
+    const handleJudgeAssignmentSuccess = () => {
+        setShowJudgeAssignmentModal(false);
+    // Recargar los datos de la competencia
+        loadCompetition(parseInt(id), true);
+    };
   
   // Manejar eliminación de competencia
   const handleDeleteCompetition = async () => {
@@ -278,6 +290,28 @@ const CompetitionDetail = () => {
     setShowDeleteModal(false);
     navigate('/competitions');
   };
+
+  const handleCategoryAssignmentSuccess = () => {
+    setShowCategoryAssignmentModal(false);
+    // Recargar los datos de la competencia
+    loadCompetition(parseInt(id), true);
+};
+
+// Manejar eliminación de juez
+const handleRemoveJudge = async (judgeId) => {
+  if (!window.confirm('¿Está seguro que desea remover este juez de la competencia?')) {
+    return;
+  }
+  
+  try {
+    await removeJudge(id, judgeId);
+    // Recargar datos
+    loadCompetition(parseInt(id), true);
+  } catch (error) {
+    console.error('Error al remover juez:', error);
+    alert('Error al remover el juez');
+  }
+};
   
   // Si está cargando, mostrar mensaje
   if (loading) {
@@ -564,12 +598,12 @@ const CompetitionDetail = () => {
                         {canManageCompetition() && (
                           <TableCell>
                             <Button 
-                              variant="outline" 
-                              size="small"
-                              onClick={() => alert('Funcionalidad en desarrollo')}
-                            >
-                              Remover
-                            </Button>
+                                variant="outline" 
+                                size="small"
+                                onClick={() => handleRemoveJudge(judge.judge_details.id)}
+                                >
+                                Remover
+                                </Button>
                           </TableCell>
                         )}
                       </TableRow>
@@ -582,13 +616,13 @@ const CompetitionDetail = () => {
               
               {canManageCompetition() && (
                 <Button 
-                  variant="primary" 
-                  onClick={() => alert('Funcionalidad en desarrollo')}
-                  style={{ marginTop: '16px' }}
+                    variant="primary"
+                    onClick={() => setShowJudgeAssignmentModal(true)}
+                    style={{ marginTop: '16px' }}
                 >
-                  Asignar Jueces
+                    Asignar Jueces
                 </Button>
-              )}
+                )}
             </>
           )}
           
@@ -623,13 +657,13 @@ const CompetitionDetail = () => {
               
               {canManageCompetition() && (
                 <Button 
-                  variant="primary" 
-                  onClick={() => alert('Funcionalidad en desarrollo')}
-                  style={{ marginTop: '16px' }}
+                    variant="primary"
+                    onClick={() => setShowCategoryAssignmentModal(true)}
+                    style={{ marginTop: '16px' }}
                 >
-                  Asignar Categorías
+                    Asignar Categorías
                 </Button>
-              )}
+            )}  
             </>
           )}
         </TabsContainer>
@@ -645,6 +679,32 @@ const CompetitionDetail = () => {
         >
           <p>¿Está seguro que desea eliminar esta competencia?</p>
           <p>Esta acción no se puede deshacer y eliminará todos los datos asociados a la competencia.</p>
+        </Modal>
+        {/* Modal de asignación de jueces */}
+        <Modal 
+            isOpen={showJudgeAssignmentModal}
+            onClose={() => setShowJudgeAssignmentModal(false)}
+            title="Asignar Jueces a la Competencia"
+            showFooter={false}
+            >
+            <JudgeAssignmentForm
+                competitionId={parseInt(id)}
+                onSuccess={handleJudgeAssignmentSuccess}
+                onCancel={() => setShowJudgeAssignmentModal(false)}
+            />
+        </Modal>
+        {/* Modal de asignación de categorías */}
+        <Modal 
+            isOpen={showCategoryAssignmentModal}
+            onClose={() => setShowCategoryAssignmentModal(false)}
+            title="Asignar Categorías a la Competencia"
+            showFooter={false}
+            >
+            <CategoryAssignmentForm
+                competitionId={parseInt(id)}
+                onSuccess={handleCategoryAssignmentSuccess}
+                onCancel={() => setShowCategoryAssignmentModal(false)}
+        />
         </Modal>
       </DetailContainer>
     </Layout>
