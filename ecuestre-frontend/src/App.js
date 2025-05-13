@@ -1,4 +1,4 @@
-// src/App.js (actualizado)
+// src/App.js (con rutas actualizadas)
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
@@ -7,9 +7,6 @@ import theme from './styles/theme';
 import { AuthProvider } from './context/AuthContext';
 import { CompetitionProvider } from './context/CompetitionContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import ParticipantEdit from './pages/ParticipantEdit';
-import JudgingPanel from './pages/JudgingPanel';
-import RankingBoard from './pages/RankingBoard';
 
 // Páginas
 import Home from './pages/Home';
@@ -17,12 +14,17 @@ import Login from './pages/Login';
 import Unauthorized from './pages/Unauthorized';
 import FEIHelpPage from './pages/FEIHelpPage';
 
-// Páginas de Competencias (actualizadas)
+// Páginas de Competencias
 import CompetitionList from './pages/CompetitionList';
 import CompetitionDetail from './pages/CompetitionDetail';
 import CompetitionCreate from './pages/CompetitionCreate';
 import CompetitionEdit from './pages/CompetitionEdit';
 import ParticipantAdd from './pages/ParticipantAdd';
+import ParticipantEdit from './pages/ParticipantEdit';
+
+// Páginas de Calificación y Rankings
+import JudgingPanel from './pages/JudgingPanel';
+import RankingBoard from './pages/RankingBoard';
 
 // Otras páginas (temporales)
 const AdminPanel = () => <div>Panel de Administración (en desarrollo)</div>;
